@@ -1,0 +1,8 @@
+version: '3.4'
+
+services:
+  im.proxy:
+    image: ${DOCKER_REGISTRY}improxy
+    build:
+      context: .
+      dockerfile: Im.Proxy/Dockerfile
