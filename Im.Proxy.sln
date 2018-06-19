@@ -3,9 +3,15 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27703.2026
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Im.Proxy", "Im.Proxy\Im.Proxy.csproj", "{E8C2F739-78D4-4D7F-BD26-785ADF229E25}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Im.Proxy", "Im.Proxy\Im.Proxy.csproj", "{E8C2F739-78D4-4D7F-BD26-785ADF229E25}"
 EndProject
 Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{38E0612C-3F03-4676-ADDF-5879028C75A7}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Im.Proxy.Vcl", "Im.Proxy.Vcl\Im.Proxy.Vcl.csproj", "{E3760924-D478-4DC0-A062-F22197B7EF22}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Im.Proxy.VclCore", "Im.Proxy.VclCore\Im.Proxy.VclCore.csproj", "{5E672D9E-CE56-4A08-8929-372D6CA642D2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Im.Proxy.VclCore.UnitTests", "Im.Proxy.VclCore.UnitTests\Im.Proxy.VclCore.UnitTests.csproj", "{C63B203A-79F3-40E6-AAE9-D9DED6020D8C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +27,18 @@ Global
 		{38E0612C-3F03-4676-ADDF-5879028C75A7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{38E0612C-3F03-4676-ADDF-5879028C75A7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{38E0612C-3F03-4676-ADDF-5879028C75A7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E3760924-D478-4DC0-A062-F22197B7EF22}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E3760924-D478-4DC0-A062-F22197B7EF22}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E3760924-D478-4DC0-A062-F22197B7EF22}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E3760924-D478-4DC0-A062-F22197B7EF22}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5E672D9E-CE56-4A08-8929-372D6CA642D2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5E672D9E-CE56-4A08-8929-372D6CA642D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5E672D9E-CE56-4A08-8929-372D6CA642D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5E672D9E-CE56-4A08-8929-372D6CA642D2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C63B203A-79F3-40E6-AAE9-D9DED6020D8C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C63B203A-79F3-40E6-AAE9-D9DED6020D8C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C63B203A-79F3-40E6-AAE9-D9DED6020D8C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C63B203A-79F3-40E6-AAE9-D9DED6020D8C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
