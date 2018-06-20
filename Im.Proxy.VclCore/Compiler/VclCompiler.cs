@@ -2,9 +2,12 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 using Antlr4.Runtime;
+using Im.Proxy.VclCore.Model;
+using Microsoft.AspNetCore.Http;
 
 namespace Im.Proxy.VclCore.Compiler
 {
@@ -25,5 +28,26 @@ namespace Im.Proxy.VclCore.Compiler
                 return visitor.Visit(parser.compileUnit());
             }
         }
+    }
+
+    public class VclHandlerCompiler : VclBaseVisitor<Expression>
+    {
+        // Compile to CodeDOM rather than expression tree due to needing derived class
+        //  we'll be able to save assemblies then
+
+        public VclHandlerCompiler(VclHandlerCompilerContext context)
+        {
+            Expression.
+
+        }
+    }
+
+    public class VclHandlerCompilerContext
+    {
+        public IList<VclBackend> Backends { get; } = new List<VclBackend>();
+
+        public IList<VclProbe> Probes { get; } = new List<VclProbe>();
+
+        //public IList<VclAcl> Acls { get; } = new List<VclAcl>();
     }
 }

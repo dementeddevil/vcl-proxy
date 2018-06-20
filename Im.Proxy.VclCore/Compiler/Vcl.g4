@@ -16,6 +16,7 @@ translationUnit
 declaration
 	:	includeDeclaration
 	|	backendDeclaration
+	|	probeDeclaration
 	|	functionDeclaration
 	;
 
@@ -33,7 +34,67 @@ backendElementList
 	;
 
 backendElement
-	:	'.' Identifier '=' constantExpression ';'
+	:	'.' backendVariableName '=' constantExpression ';'
+	;
+
+backendVariableName
+	:	'host'						/* mandatory */
+	|	'port'
+	|	'host_header'
+	|	'connect_timeout'
+	|	'first_byte_timeout'
+	|	'between_bytes_timeout'
+	|	'probe'
+	|	'proxy_header'
+	|	'max_connections'
+	;
+
+probeDeclaration
+	:	'probe' Identifier '{' probeElementList '}'
+	;
+
+probeElementList
+	:	probeElement
+	|	probeElementList probeElement
+	;
+
+probeElement
+	:	'.' probeVariableName '=' constantExpression ';'
+	;
+
+probeVariableName
+	:	'url'
+	|	'request'
+	|	'expected_response'
+	|	'timeout'
+	|	'interval'
+	|	'initial'
+	|	'window'
+	|	'threshold'
+	;
+
+aclDeclaration
+	:	'acl' Identifier '{' aclElementList '}'
+	;
+
+aclElementList
+	:	ignoreableAclElement
+	|	aclElementList ignoreableAclElement
+	;
+
+ignoreableAclElement
+	:	aclElement
+	|	'(' aclElement ')'
+	;
+
+aclElement
+	:	('!')? ipAddressOrHost
+	|	subnet=SubnetMask
+	;
+
+ipAddressOrHost
+	:	StringLiteral
+	|	IpAddress
 	;
 
 functionDeclaration
@@ -47,6 +108,7 @@ statement
 	|	removeStatement
 	|	errorStatement
 	|	syntheticStatement
+	|	callStatement
 	|	returnStatement
 	|	compoundStatement
 	;
@@ -75,16 +137,20 @@ syntheticStatement
 	:	'synthetic' syntheticExpression ';'
 	;
 
+callStatement
+	:	'call' subroutineName = Identifier ';'
+	;
+
 returnStatement
 	:	'return' '(' returnStateExpression ')' ';'
 	;
 
 returnStateExpression
-	:	simpleReturnStatePrimitives
-	|	complexReturnStatePrimitives
+	:	simpleReturnStateExpression
+	|	complexReturnStateExpression
 	;
 	
-simpleReturnStatePrimitives
+simpleReturnStateExpression
 	:	'restart'
 	|	'receive'
 	|	'hash'
@@ -104,7 +170,7 @@ simpleReturnStatePrimitives
 	|	'error'
 	;
 
-complexReturnStatePrimitives
+complexReturnStateExpression
 	:	returnSynthStateExpression
 	;
 
@@ -173,9 +239,14 @@ castExpression
 
 equalityExpression
 	:	castExpression
-	|	equalityExpression '==' castExpression
-	|	equalityExpression '!=' castExpression
-	|	equalityExpression '~' matchExpression
+	|	equalityExpression op=equalityOperator castExpression
+	;
+
+equalityOperator
+	:	'=='
+	|	'!='
+	|	'~'
+	|	'!~'
 	;
 
 logicalAndExpression
@@ -235,7 +306,7 @@ IntegerConstant
 
 fragment
 TimeConstant
-	:	DecimalConstant ('s' | 'm' | 'h')
+	:	DecimalConstant ('ms' | 's' | 'm' | 'h' | 'd' | 'w' | 'y')
 	;
 
 fragment
@@ -266,6 +337,18 @@ HexEncoding
 	:	('%' [a-fA-F0-9] [a-fA-F0-9]) +
 	;
 
+SubnetMask
+	:	IpAddressSequence '/' Digit+
+	;
+
+IpAddress
+	:	IpAddressSequence
+	;
+
+fragment
+IpAddressSequence
+	:	'"' Digit+ '.' Digit+ '.' Digit+ '.' Digit+ '"'
+	;
 
 StringLiteral
 	:	StringConstant

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Im.Proxy.VclCore.Model;
@@ -50,6 +51,35 @@ namespace Im.Proxy.VclCore
     /// </remarks>
     public class VclHandler
     {
+
+        private static class SystemFunctionToMethodInfoFactory
+        {
+            private static readonly Dictionary<string, MethodInfo> MethodLookup =
+                new Dictionary<string, MethodInfo>()
+                {
+                    { "vcl_init", typeof(VclHandler).GetMethod(nameof(VclInit)) },
+                    { "vcl_recv", typeof(VclHandler).GetMethod(nameof(VclReceive)) },
+                    { "vcl_hash", typeof(VclHandler).GetMethod(nameof(VclHash)) },
+                    { "vcl_pipe", typeof(VclHandler).GetMethod(nameof(VclPipe)) },
+                    { "vcl_pass", typeof(VclHandler).GetMethod(nameof(VclPass)) },
+                    { "vcl_hit", typeof(VclHandler).GetMethod(nameof(VclHit)) },
+                    { "vcl_miss", typeof(VclHandler).GetMethod(nameof(VclMiss)) },
+                    { "vcl_fetch", typeof(VclHandler).GetMethod(nameof(VclFetch)) },
+                    { "vcl_deliver", typeof(VclHandler).GetMethod(nameof(VclDeliver)) },
+                    { "vcl_purge", typeof(VclHandler).GetMethod(nameof(VclPurge)) },
+                    { "vcl_synth", typeof(VclHandler).GetMethod(nameof(VclSynth)) },
+                    { "vcl_error", typeof(VclHandler).GetMethod(nameof(VclError)) },
+                    { "vcl_backend_fetch", typeof(VclHandler).GetMethod(nameof(VclBackendFetch)) },
+                    { "vcl_backend_response", typeof(VclHandler).GetMethod(nameof(VclBackendResponse)) },
+                    { "vcl_backend_error", typeof(VclHandler).GetMethod(nameof(VclBackendError)) },
+                };
+
+            public static MethodInfo GetSystemMethodInfo(string vclSubroutineName)
+            {
+                return MethodLookup.TryGetValue(vclSubroutineName, out var mi) ? mi : null;
+            }
+        }
+
         private abstract class VclFrontendHandlerState
         {
             public abstract VclAction State { get; }
@@ -558,6 +588,11 @@ namespace Im.Proxy.VclCore
             }
         }
 
+        protected virtual void VclInit(VclContext context)
+        {
+
+        }
+
         protected virtual Task<VclAction> VclReceive(VclContext context)
         {
             return Task.FromResult(VclAction.Done);
@@ -601,6 +636,11 @@ namespace Im.Proxy.VclCore
         protected virtual Task<VclAction> VclPurge(VclContext context)
         {
             return Task.FromResult(VclAction.Done);
+        }
+
+        protected virtual Task<VclAction> VclSynth(VclContext context)
+        {
+            return Task.FromResult(VclAction.Deliver);
         }
 
         protected virtual Task VclError(VclContext context)
@@ -674,4 +714,6 @@ namespace Im.Proxy.VclCore
             return Task.CompletedTask;
         }
     }
+
+
 }
