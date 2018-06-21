@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Antlr4.Runtime;
 using Im.Proxy.VclCore.Model;
 using Microsoft.AspNetCore.Http;
+using MemberBinding = System.Linq.Expressions.MemberBinding;
 
 namespace Im.Proxy.VclCore.Compiler
 {
@@ -30,14 +32,71 @@ namespace Im.Proxy.VclCore.Compiler
         }
     }
 
+    public class VclCompileNamedObjects : VclBaseVisitor<Expression>
+    {
+        private IList<MemberBinding> CurrentProbeBindings { get; }
+
+
+        public IDictionary<string, Expression> ProbeExpressions { get; } =
+            new Dictionary<string, Expression>(StringComparer.OrdinalIgnoreCase);
+
+        public IDictionary<string, Expression> BackendExpressions { get; } =
+            new Dictionary<string, Expression>(StringComparer.OrdinalIgnoreCase);
+
+
+        public override Expression VisitBackendDeclaration(VclParser.BackendDeclarationContext context)
+        {
+            return base.VisitBackendDeclaration(context);
+        }
+
+        public override Expression VisitProbeDeclaration(VclParser.ProbeDeclarationContext context)
+        {
+            var name = context.Identifier().GetText();
+            if (ProbeExpressions.ContainsKey(name))
+            {
+                throw new ArgumentException("Probe name is not unique");
+            }
+
+            // TODO: Setup current probe expression
+            CurrentProbeBindings.Clear();
+
+            base.VisitProbeDeclaration(context);
+
+            var probeTypeCtor = typeof(VclProbe).GetConstructor(new[] { typeof(string) });
+
+            ProbeExpressions.Add(
+                name,
+                Expression.MemberInit(
+                    Expression.New(probeTypeCtor, Expression.Constant(name)),
+                    CurrentProbeBindings));
+
+            return null;
+        }
+
+        public override Expression VisitProbeElement(VclParser.ProbeElementContext context)
+        {
+            base.VisitProbeElement(context);
+
+            //base.VisitPro
+            var normalisedMemberName = context.probeVariableName().GetText().Replace("_", "");
+
+            var propInfo = typeof(VclProbe).GetProperty(
+                normalisedMemberName,
+                BindingFlags.Instance |
+                BindingFlags.Public |
+                BindingFlags.IgnoreCase);
+            CurrentProbeBindings.Add(
+                Expression.Bind(propInfo, Expression.Constant(null)));
+
+            return null;
+        }
+    }
+
     public class VclHandlerCompiler : VclBaseVisitor<Expression>
     {
-        // Compile to CodeDOM rather than expression tree due to needing derived class
-        //  we'll be able to save assemblies then
-
         public VclHandlerCompiler(VclHandlerCompilerContext context)
         {
-            Expression.
+            //Expression.
 
         }
     }

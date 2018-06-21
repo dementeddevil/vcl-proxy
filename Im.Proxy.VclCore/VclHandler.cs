@@ -549,6 +549,7 @@ namespace Im.Proxy.VclCore
 
         private int _backendAttempt;
         private int _maxBackendRetries = 3;
+        private int _defaultTtl = 120;
 
         public async Task HandleRequest(HttpContext context)
         {
@@ -660,10 +661,10 @@ namespace Im.Proxy.VclCore
             var httpClient = new HttpClient();
             var backendRequest = new HttpRequestMessage();
             backendRequest.Method = new HttpMethod(context.BackendRequest.Method);
-            backendRequest.RequestUri = context.BackendRequest.Uri;
+            backendRequest.RequestUri = new Uri(context.BackendRequest.Uri);
             foreach (var entry in context.BackendRequest.Headers)
             {
-                backendRequest.Headers[entry.Item1] = entry.Item2;
+                backendRequest.Headers.Add(entry.Key, entry.Value);
             }
 
             // Get raw response from backend

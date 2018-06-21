@@ -118,7 +118,7 @@
       <DependentUpon>Vcl.g4</DependentUpon>
     </Compile>
     <Compile Include="VclHandler.cs" />
-    <Compile Include="VclProbe.cs" />
+    <Compile Include="Model\VclProbe.cs" />
   </ItemGroup>
   <ItemGroup>
     <Antlr4 Include="Compiler\Vcl.g4">

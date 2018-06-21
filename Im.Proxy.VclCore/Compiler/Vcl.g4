@@ -34,15 +34,15 @@ backendElementList
 	;
 
 backendElement
-	:	'.' 'host' '=' StringConstant ';'
-	|	'.' 'port' '=' ('http' | 'https') ';'
-	|	'.' 'host_header' '=' constantExpression ';'
-	|	'.' 'connect_timeout' '=' TimeConstant ';'
-	|	'.' 'first_byte_timeout' '=' TimeConstant ';'
-	|	'.' 'between_bytes_timeout' '=' TimeConstant ';'
-	|	'.' 'proxy_header' '=' StringConstant ';'
-	|	'.' 'max_connections' '=' IntegerConstant ';'
-	|	'.' 'probe' '=' probeExpression ';'
+	:	'.' key='host' '=' StringConstant ';'
+	|	'.' key='port' '=' ('http' | 'https') ';'
+	|	'.' key='host_header' '=' constantExpression ';'
+	|	'.' key='connect_timeout' '=' TimeConstant ';'
+	|	'.' key='first_byte_timeout' '=' TimeConstant ';'
+	|	'.' key='between_bytes_timeout' '=' TimeConstant ';'
+	|	'.' key='proxy_header' '=' StringConstant ';'
+	|	'.' key='max_connections' '=' IntegerConstant ';'
+	|	'.' key='probe' '=' probeExpression ';'
 	;
 
 probeExpression
@@ -229,8 +229,11 @@ dottedExpression
 	;
 
 constantExpression
-	:	Constant
-	|	StringConstant
+	:	StringConstant
+	|	IntegerConstant
+	|	TimeConstant
+	|	DecimalConstant
+	|	BooleanConstant
 	;
 
 unaryExpression
