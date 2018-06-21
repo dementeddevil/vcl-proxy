@@ -106,6 +106,7 @@
     <Compile Include="Model\VclBackendResponse.cs" />
     <Compile Include="Model\VclClient.cs" />
     <Compile Include="Model\VclContext.cs" />
+    <Compile Include="Model\VclDirector.cs" />
     <Compile Include="Model\VclRequest.cs" />
     <Compile Include="Compiler\VclCompiler.cs" />
     <Compile Include="Model\VclResponse.cs" />

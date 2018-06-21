@@ -21,7 +21,7 @@ declaration
 	;
 
 includeDeclaration
-	:	'include' StringLiteral ';'
+	:	'include' StringConstant ';'
 	;
 
 backendDeclaration
@@ -34,19 +34,28 @@ backendElementList
 	;
 
 backendElement
-	:	'.' backendVariableName '=' constantExpression ';'
+	:	'.' 'host' '=' StringConstant ';'
+	|	'.' 'port' '=' ('http' | 'https') ';'
+	|	'.' 'host_header' '=' constantExpression ';'
+	|	'.' 'connect_timeout' '=' TimeConstant ';'
+	|	'.' 'first_byte_timeout' '=' TimeConstant ';'
+	|	'.' 'between_bytes_timeout' '=' TimeConstant ';'
+	|	'.' 'probe' '=' probeExpression ';'
+	|	'.' 'proxy_header' '=' StringConstant ';'
+	|	'.' 'max_connections' '=' IntegerConstant ';'
 	;
 
-backendVariableName
-	:	'host'						/* mandatory */
-	|	'port'
-	|	'host_header'
-	|	'connect_timeout'
-	|	'first_byte_timeout'
-	|	'between_bytes_timeout'
-	|	'probe'
-	|	'proxy_header'
-	|	'max_connections'
+probeExpression
+	:	probeReferenceExpression
+	|	probeInlineExpression
+	;
+
+probeReferenceExpression
+	:	probeName=Identifier ';'
+	;
+
+probeInlineExpression
+	:	'{' probeElementList '}'
 	;
 
 probeDeclaration
@@ -93,7 +102,7 @@ aclElement
 	;
 
 ipAddressOrHost
-	:	StringLiteral
+	:	StringConstant
 	|	IpAddress
 	;
 
@@ -118,7 +127,7 @@ expressionStatement
 	;
 
 ifStatement
-	:	'if' '(' expression ')' statement ('else' statement)?
+	:	'if' '(' expression ')' statement (('elif' | 'else if') '(' expression ')' statement)? ('else' statement)?
 	;
 
 setStatement
@@ -130,7 +139,7 @@ removeStatement
 	;
 
 errorStatement
-	:	'error' HttpStatusCode StringLiteral ';'
+	:	'error' HttpStatusCode StringConstant ';'
 	;
 
 syntheticStatement
@@ -175,7 +184,7 @@ complexReturnStateExpression
 	;
 
 returnSynthStateExpression
-	:	'synth' '(' statusCode=HttpStatusCode (',' statusDescription=StringLiteral )? ')'
+	:	'synth' '(' statusCode=HttpStatusCode (',' statusDescription=StringConstant )? ')'
 	;
 
 compoundStatement
@@ -221,7 +230,7 @@ dottedExpression
 
 constantExpression
 	:	Constant
-	|	StringLiteral
+	|	StringConstant
 	;
 
 unaryExpression
@@ -265,7 +274,7 @@ matchExpression
 	;
 
 regularExpression
-	:	StringLiteral
+	:	StringConstant
 	;
 
 backendReferenceExpression
@@ -293,25 +302,25 @@ Identifier
     :   IdentifierNondigit IdentifierHypen*
     ;
 
-Constant
-	:	IntegerConstant
-	|	StringConstant
-	|	TimeConstant
-	;
-
-fragment
 IntegerConstant
 	:	DecimalConstant
 	;
 
-fragment
 TimeConstant
 	:	DecimalConstant ('ms' | 's' | 'm' | 'h' | 'd' | 'w' | 'y')
 	;
 
-fragment
 DecimalConstant
 	:	Digit+
+	;
+
+BooleanConstant
+	:	'false'
+	|	'true'
+	;
+
+StringConstant
+	:	'"' CharacterSequence? '"'
 	;
 
 fragment
@@ -348,15 +357,6 @@ IpAddress
 fragment
 IpAddressSequence
 	:	'"' Digit+ '.' Digit+ '.' Digit+ '.' Digit+ '"'
-	;
-
-StringLiteral
-	:	StringConstant
-	;
-
-fragment
-StringConstant
-	:	'"' CharacterSequence? '"'
 	;
 
 fragment
