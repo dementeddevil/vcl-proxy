@@ -40,9 +40,9 @@ backendElement
 	|	'.' 'connect_timeout' '=' TimeConstant ';'
 	|	'.' 'first_byte_timeout' '=' TimeConstant ';'
 	|	'.' 'between_bytes_timeout' '=' TimeConstant ';'
-	|	'.' 'probe' '=' probeExpression ';'
 	|	'.' 'proxy_header' '=' StringConstant ';'
 	|	'.' 'max_connections' '=' IntegerConstant ';'
+	|	'.' 'probe' '=' probeExpression ';'
 	;
 
 probeExpression
