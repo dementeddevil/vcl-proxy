@@ -11,7 +11,12 @@ namespace Im.Proxy.VclCore
     {
         private int? _initial;
 
-        public string Mame { get; set; } = "default";
+        public VclProbe(string name = null)
+        {
+            Name = name ?? "inline";
+        }
+
+        public string Name { get; }
 
         public string Url { get; set; } = "/";
 

@@ -21,7 +21,7 @@ declaration
 	;
 
 includeDeclaration
-	:	'include' StringLiteral ';'
+	:	'include' StringConstant ';'
 	;
 
 backendDeclaration
@@ -34,19 +34,28 @@ backendElementList
 	;
 
 backendElement
-	:	'.' backendVariableName '=' constantExpression ';'
+	:	'.' key='host' '=' StringConstant ';'
+	|	'.' key='port' '=' ('http' | 'https') ';'
+	|	'.' key='host_header' '=' constantExpression ';'
+	|	'.' key='connect_timeout' '=' TimeConstant ';'
+	|	'.' key='first_byte_timeout' '=' TimeConstant ';'
+	|	'.' key='between_bytes_timeout' '=' TimeConstant ';'
+	|	'.' key='proxy_header' '=' StringConstant ';'
+	|	'.' key='max_connections' '=' IntegerConstant ';'
+	|	'.' key='probe' '=' probeExpression ';'
 	;
 
-backendVariableName
-	:	'host'						/* mandatory */
-	|	'port'
-	|	'host_header'
-	|	'connect_timeout'
-	|	'first_byte_timeout'
-	|	'between_bytes_timeout'
-	|	'probe'
-	|	'proxy_header'
-	|	'max_connections'
+probeExpression
+	:	probeReferenceExpression
+	|	probeInlineExpression
+	;
+
+probeReferenceExpression
+	:	probeName=Identifier ';'
+	;
+
+probeInlineExpression
+	:	'{' probeElementList '}'
 	;
 
 probeDeclaration
@@ -59,10 +68,50 @@ probeElementList
 	;
 
 probeElement
-	:	'.' probeVariableName '=' constantExpression ';'
+	:	'.' probeVariableExpression ';'
 	;
 
-probeVariableName
+probeVariableExpression
+	:	probeStringVariableExpression
+	|	probeTimeVariableExpression
+	|	probeIntegerVariableExpression
+	;
+
+probeStringVariableExpression
+	:	name=probeStringVariableName '=' value=stringLiteral
+	;
+
+probeTimeVariableExpression
+	:	name=probeTimeVariableName '=' value=timeLiteral
+	;
+
+probeIntegerVariableExpression
+	:	name=probeIntegerVariableName '=' value=integerLiteral
+	;
+
+probeStringVariableName
+	:	'url'
+	|	'request'
+	|	'expected_response'
+	|	'timeout'
+	|	'interval'
+	|	'initial'
+	|	'window'
+	|	'threshold'
+	;
+
+probeTimeVariableName
+	:	'url'
+	|	'request'
+	|	'expected_response'
+	|	'timeout'
+	|	'interval'
+	|	'initial'
+	|	'window'
+	|	'threshold'
+	;
+
+probeIntegerVariableName
 	:	'url'
 	|	'request'
 	|	'expected_response'
@@ -93,7 +142,7 @@ aclElement
 	;
 
 ipAddressOrHost
-	:	StringLiteral
+	:	StringConstant
 	|	IpAddress
 	;
 
@@ -118,7 +167,7 @@ expressionStatement
 	;
 
 ifStatement
-	:	'if' '(' expression ')' statement ('else' statement)?
+	:	'if' '(' expression ')' statement (('elif' | 'else if') '(' expression ')' statement)? ('else' statement)?
 	;
 
 setStatement
@@ -130,7 +179,7 @@ removeStatement
 	;
 
 errorStatement
-	:	'error' HttpStatusCode StringLiteral ';'
+	:	'error' HttpStatusCode StringConstant ';'
 	;
 
 syntheticStatement
@@ -175,7 +224,7 @@ complexReturnStateExpression
 	;
 
 returnSynthStateExpression
-	:	'synth' '(' statusCode=HttpStatusCode (',' statusDescription=StringLiteral )? ')'
+	:	'synth' '(' statusCode=HttpStatusCode (',' statusDescription=StringConstant )? ')'
 	;
 
 compoundStatement
@@ -220,8 +269,11 @@ dottedExpression
 	;
 
 constantExpression
-	:	Constant
-	|	StringLiteral
+	:	StringConstant
+	|	IntegerConstant
+	|	TimeConstant
+	|	DecimalConstant
+	|	BooleanConstant
 	;
 
 unaryExpression
@@ -265,7 +317,7 @@ matchExpression
 	;
 
 regularExpression
-	:	StringLiteral
+	:	StringConstant
 	;
 
 backendReferenceExpression
@@ -281,6 +333,19 @@ syntheticSubExpression
 	:	SyntheticString
 	|	primaryExpression
 	;
+
+stringLiteral
+	:	StringConstant
+	;
+
+integerLiteral
+	:	IntegerConstant
+	;
+
+timeLiteral
+	:	TimeConstant
+	;
+
 /*
  * Lexer Rules
  */
@@ -293,25 +358,25 @@ Identifier
     :   IdentifierNondigit IdentifierHypen*
     ;
 
-Constant
-	:	IntegerConstant
-	|	StringConstant
-	|	TimeConstant
-	;
-
-fragment
 IntegerConstant
 	:	DecimalConstant
 	;
 
-fragment
 TimeConstant
 	:	DecimalConstant ('ms' | 's' | 'm' | 'h' | 'd' | 'w' | 'y')
 	;
 
-fragment
 DecimalConstant
 	:	Digit+
+	;
+
+BooleanConstant
+	:	'false'
+	|	'true'
+	;
+
+StringConstant
+	:	'"' CharacterSequence? '"'
 	;
 
 fragment
@@ -348,15 +413,6 @@ IpAddress
 fragment
 IpAddressSequence
 	:	'"' Digit+ '.' Digit+ '.' Digit+ '.' Digit+ '"'
-	;
-
-StringLiteral
-	:	StringConstant
-	;
-
-fragment
-StringConstant
-	:	'"' CharacterSequence? '"'
 	;
 
 fragment
