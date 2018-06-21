@@ -68,10 +68,50 @@ probeElementList
 	;
 
 probeElement
-	:	'.' probeVariableName '=' constantExpression ';'
+	:	'.' probeVariableExpression ';'
 	;
 
-probeVariableName
+probeVariableExpression
+	:	probeStringVariableExpression
+	|	probeTimeVariableExpression
+	|	probeIntegerVariableExpression
+	;
+
+probeStringVariableExpression
+	:	name=probeStringVariableName '=' value=stringLiteral
+	;
+
+probeTimeVariableExpression
+	:	name=probeTimeVariableName '=' value=timeLiteral
+	;
+
+probeIntegerVariableExpression
+	:	name=probeIntegerVariableName '=' value=integerLiteral
+	;
+
+probeStringVariableName
+	:	'url'
+	|	'request'
+	|	'expected_response'
+	|	'timeout'
+	|	'interval'
+	|	'initial'
+	|	'window'
+	|	'threshold'
+	;
+
+probeTimeVariableName
+	:	'url'
+	|	'request'
+	|	'expected_response'
+	|	'timeout'
+	|	'interval'
+	|	'initial'
+	|	'window'
+	|	'threshold'
+	;
+
+probeIntegerVariableName
 	:	'url'
 	|	'request'
 	|	'expected_response'
@@ -293,6 +333,19 @@ syntheticSubExpression
 	:	SyntheticString
 	|	primaryExpression
 	;
+
+stringLiteral
+	:	StringConstant
+	;
+
+integerLiteral
+	:	IntegerConstant
+	;
+
+timeLiteral
+	:	TimeConstant
+	;
+
 /*
  * Lexer Rules
  */
