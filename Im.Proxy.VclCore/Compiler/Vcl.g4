@@ -194,7 +194,7 @@ removeStatement
 	;
 
 errorStatement
-	:	'error' HttpStatusCode StringConstant ';'
+	:	'error' statusCode=IntegerConstant statusDescription=StringConstant ';'
 	;
 
 syntheticStatement
@@ -202,7 +202,7 @@ syntheticStatement
 	;
 
 callStatement
-	:	'call' subroutineName = Identifier ';'
+	:	'call' subroutineName=Identifier ';'
 	;
 
 returnStatement
@@ -239,7 +239,7 @@ complexReturnStateExpression
 	;
 
 returnSynthStateExpression
-	:	'synth' '(' statusCode=HttpStatusCode (',' statusDescription=StringConstant )? ')'
+	:	'synth' '(' statusCode=IntegerConstant (',' statusDescription=StringConstant )? ')'
 	;
 
 compoundStatement
@@ -364,10 +364,6 @@ timeLiteral
  * Lexer Rules
  */
 
-HttpStatusCode
-	:	Digit Digit Digit
-	;
-
 Identifier
     :   IdentifierNondigit IdentifierHypen*
     ;
@@ -405,10 +401,6 @@ IdentifierNonHyphen
 	:	IdentifierNondigit
     |   Digit
 	;
-
-DigitSequence
-    :   Digit+
-    ;
 
 HexEncoding
 	:	('%' [a-fA-F0-9] [a-fA-F0-9]) +
