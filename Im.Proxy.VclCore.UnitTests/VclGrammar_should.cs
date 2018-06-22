@@ -1,12 +1,16 @@
-﻿using System.Text;
+﻿using System;
+using System.Linq.Expressions;
+using System.Text;
 using FluentAssertions;
+using Im.Proxy.VclCore.Compiler;
+using Im.Proxy.VclCore.Model;
 using Im.Proxy.VclCore.UnitTests.Properties;
 using Xunit;
 
 namespace Im.Proxy.VclCore.UnitTests
 {
     [Trait("", "")]
-    public class VclGrammer_should
+    public class VclGrammar_should
     {
         public static TheoryData<string, string[]> IncludeTestData()
         {
@@ -113,6 +117,45 @@ namespace Im.Proxy.VclCore.UnitTests
 
             // Assert
             visitor.Operations.Should().BeEquivalentTo(expectedOperations);
+        }
+
+        [Fact(DisplayName = "Given named probe definition, When compiled, Then valid probe object is created.")]
+        public void GenerateNamedProbeExpression()
+        {
+            var vclText =
+                "probe myprobe {" +
+                "    .url = \"/healthcheck/\";" +
+                "    .expected_response = 201;" +
+                "    .timeout = 5s;" +
+                "    .window = 10;" +
+                "    .interval = 1m;" +
+                "    .threshold = 7;" +
+                "    .initial = 6;" +
+                "}";
+
+            // Arrange
+            var visitor = new VclCompileNamedProbeObjects();
+
+            // Act
+            new VclCompiler().CompileAndVisit(vclText, visitor);
+
+            // Assert
+            Assert.True(visitor.ProbeExpressions.ContainsKey("myprobe"));
+
+            var probe = Expression.Lambda<Func<VclProbe>>(
+                visitor.ProbeExpressions["myprobe"]).Compile()();
+            probe.Should().BeEquivalentTo(
+                new
+                {
+                    Name = "myprobe",
+                    Url = "/healthcheck/",
+                    ExpectedResponse = 201,
+                    Window = 10,
+                    Threshold = 7,
+                    Initial = 6,
+                    Timeout = TimeSpan.FromSeconds(5),
+                    Interval = TimeSpan.FromMinutes(1)
+                });
         }
 
         [Fact]

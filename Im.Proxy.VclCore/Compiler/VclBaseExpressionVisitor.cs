@@ -7,16 +7,19 @@ namespace Im.Proxy.VclCore.Compiler
     {
         public override Expression VisitStringLiteral(VclParser.StringLiteralContext context)
         {
-            return Expression.Constant(context.StringConstant().GetText());
+            base.VisitStringLiteral(context);
+            return Expression.Constant(context.StringConstant().GetText().Trim('"'));
         }
 
         public override Expression VisitIntegerLiteral(VclParser.IntegerLiteralContext context)
         {
+            base.VisitIntegerLiteral(context);
             return Expression.Constant(int.Parse(context.IntegerConstant().GetText()));
         }
 
         public override Expression VisitTimeLiteral(VclParser.TimeLiteralContext context)
         {
+            base.VisitTimeLiteral(context);
             var rawValue = context.TimeConstant().GetText();
             var value = TimeSpan.Zero;
             if (rawValue.EndsWith("ms"))
@@ -30,19 +33,19 @@ namespace Im.Proxy.VclCore.Compiler
                 switch (rawValue.Substring(rawValue.Length - 1, 1).ToLower())
                 {
                     case "s":
-                        value = TimeSpan.FromMilliseconds(int.Parse(timeComponentText));
+                        value = TimeSpan.FromSeconds(int.Parse(timeComponentText));
                         break;
                     case "m":
-                        value = TimeSpan.FromMilliseconds(int.Parse(timeComponentText));
+                        value = TimeSpan.FromMinutes(int.Parse(timeComponentText));
                         break;
                     case "d":
-                        value = TimeSpan.FromMilliseconds(int.Parse(timeComponentText));
+                        value = TimeSpan.FromDays(int.Parse(timeComponentText));
                         break;
                     case "w":
-                        value = TimeSpan.FromMilliseconds(int.Parse(timeComponentText));
+                        value = TimeSpan.FromDays(7 * int.Parse(timeComponentText));
                         break;
                     case "y":
-                        value = TimeSpan.FromMilliseconds(int.Parse(timeComponentText));
+                        value = TimeSpan.FromDays(365 * int.Parse(timeComponentText));
                         break;
                     default:
                         throw new InvalidOperationException("Unable to parse time component");

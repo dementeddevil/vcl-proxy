@@ -34,13 +34,13 @@ backendElementList
 	;
 
 backendElement
-	:	'.' backendVariableExpression ';'
+	:	'.' backendVariableExpression
 	;
 
 backendVariableExpression
-	:	backendStringVariableExpression
-	|	backendIntegerVariableExpression
-	|	backendTimeVariableExpression
+	:	backendStringVariableExpression  ';'
+	|	backendIntegerVariableExpression ';'
+	|	backendTimeVariableExpression ';'
 	|	backendProbeVariableExpression
 	;
 
@@ -86,12 +86,12 @@ probeReferenceExpression
 	:	probeName=Identifier ';'
 	;
 
-probeInlineExpression
-	:	'{' probeElementList '}'
-	;
-
 probeDeclaration
 	:	'probe' Identifier probeInlineExpression
+	;
+
+probeInlineExpression
+	:	'{' probeElementList '}'
 	;
 
 probeElementList
@@ -105,50 +105,33 @@ probeElement
 
 probeVariableExpression
 	:	probeStringVariableExpression
-	|	probeTimeVariableExpression
 	|	probeIntegerVariableExpression
+	|	probeTimeVariableExpression
 	;
 
 probeStringVariableExpression
 	:	name=probeStringVariableName '=' value=stringLiteral
 	;
 
-probeTimeVariableExpression
-	:	name=probeTimeVariableName '=' value=timeLiteral
-	;
-
 probeIntegerVariableExpression
 	:	name=probeIntegerVariableName '=' value=integerLiteral
 	;
 
+probeTimeVariableExpression
+	:	name=probeTimeVariableName '=' value=timeLiteral
+	;
+
 probeStringVariableName
 	:	'url'
-	|	'request'
-	|	'expected_response'
-	|	'timeout'
-	|	'interval'
-	|	'initial'
-	|	'window'
-	|	'threshold'
 	;
 
 probeTimeVariableName
-	:	'url'
-	|	'request'
-	|	'expected_response'
-	|	'timeout'
+	:	'timeout'
 	|	'interval'
-	|	'initial'
-	|	'window'
-	|	'threshold'
 	;
 
 probeIntegerVariableName
-	:	'url'
-	|	'request'
-	|	'expected_response'
-	|	'timeout'
-	|	'interval'
+	:	'expected_response'
 	|	'initial'
 	|	'window'
 	|	'threshold'
@@ -304,7 +287,6 @@ constantExpression
 	:	StringConstant
 	|	IntegerConstant
 	|	TimeConstant
-	|	DecimalConstant
 	|	BooleanConstant
 	;
 
@@ -391,15 +373,11 @@ Identifier
     ;
 
 IntegerConstant
-	:	DecimalConstant
+	:	Digit+
 	;
 
 TimeConstant
-	:	DecimalConstant ('ms' | 's' | 'm' | 'h' | 'd' | 'w' | 'y')
-	;
-
-DecimalConstant
-	:	Digit+
+	:	Digit+ ('ms' | 's' | 'm' | 'h' | 'd' | 'w' | 'y')
 	;
 
 BooleanConstant
@@ -416,11 +394,13 @@ IdentifierNondigit
     :   Nondigit
     ;
 
+fragment
 IdentifierHypen
 	:	IdentifierNonHyphen
 	|	Hyphen IdentifierNonHyphen
 	;
 
+fragment
 IdentifierNonHyphen
 	:	IdentifierNondigit
     |   Digit
@@ -468,6 +448,7 @@ Digit
     :   [0-9]
     ;
 
+fragment
 Hyphen
 	:	'-'
 	;
