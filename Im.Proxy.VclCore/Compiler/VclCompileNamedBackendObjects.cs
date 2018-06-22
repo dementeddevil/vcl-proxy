@@ -14,22 +14,17 @@ namespace Im.Proxy.VclCore.Compiler
     /// This must be run prior to the main compile (which needs to refer to these probes)
     /// </remarks>
     /// <seealso cref="VclBaseExpressionVisitor" />
-    public class VclCompileNamedBackendObjects : VclBaseExpressionVisitor
+    public class VclCompileNamedBackendObjects : VclCompileNamedProbeObjects
     {
-        public VclCompileNamedBackendObjects(
-            IDictionary<string, Expression> probeExpressions)
+        public VclCompileNamedBackendObjects(IDictionary<string, Expression> probeExpressions)
+            : base(probeExpressions)
         {
-            ProbeExpressions = probeExpressions;
         }
 
         public IDictionary<string, Expression> BackendExpressions { get; } =
             new Dictionary<string, Expression>(StringComparer.OrdinalIgnoreCase);
 
-        public IDictionary<string, Expression> ProbeExpressions { get; }
-
         private IList<MemberBinding> CurrentBackendBindings { get; } = new List<MemberBinding>();
-
-        private IList<MemberBinding> CurrentProbeBindings { get; } = new List<MemberBinding>();
 
         private string CurrentBackendName { get; set; }
 
@@ -56,6 +51,81 @@ namespace Im.Proxy.VclCore.Compiler
             return null;
         }
 
+        public override Expression VisitBackendStringVariableExpression(VclParser.BackendStringVariableExpressionContext context)
+        {
+            base.VisitBackendStringVariableExpression(context);
+
+            var normalisedMemberName = context.name.GetText().Replace("_", "");
+            var propInfo = typeof(VclProbe).GetProperty(
+                normalisedMemberName,
+                BindingFlags.Instance |
+                BindingFlags.Public |
+                BindingFlags.IgnoreCase |
+                BindingFlags.SetProperty);
+            CurrentBackendBindings.Add(
+                Expression.Bind(
+                    propInfo,
+                    VisitStringLiteral(context.stringLiteral())));
+
+            return null;
+        }
+
+        public override Expression VisitBackendIntegerVariableExpression(VclParser.BackendIntegerVariableExpressionContext context)
+        {
+            base.VisitBackendIntegerVariableExpression(context);
+
+            var normalisedMemberName = context.name.GetText().Replace("_", "");
+            var propInfo = typeof(VclProbe).GetProperty(
+                normalisedMemberName,
+                BindingFlags.Instance |
+                BindingFlags.Public |
+                BindingFlags.IgnoreCase |
+                BindingFlags.SetProperty);
+            CurrentBackendBindings.Add(
+                Expression.Bind(
+                    propInfo,
+                    VisitIntegerLiteral(context.integerLiteral())));
+
+            return null;
+        }
+
+        public override Expression VisitBackendTimeVariableExpression(VclParser.BackendTimeVariableExpressionContext context)
+        {
+            base.VisitBackendTimeVariableExpression(context);
+
+            var normalisedMemberName = context.name.GetText().Replace("_", "");
+            var propInfo = typeof(VclProbe).GetProperty(
+                normalisedMemberName,
+                BindingFlags.Instance |
+                BindingFlags.Public |
+                BindingFlags.IgnoreCase |
+                BindingFlags.SetProperty);
+            CurrentBackendBindings.Add(
+                Expression.Bind(
+                    propInfo,
+                    VisitTimeLiteral(context.timeLiteral())));
+
+            return null;
+        }
+
+        public override Expression VisitBackendProbeVariableExpression(VclParser.BackendProbeVariableExpressionContext context)
+        {
+            base.VisitBackendProbeVariableExpression(context);
+
+            var normalisedMemberName = context.name.Text.Replace("_", "");
+            var propInfo = typeof(VclProbe).GetProperty(
+                normalisedMemberName,
+                BindingFlags.Instance |
+                BindingFlags.Public |
+                BindingFlags.IgnoreCase |
+                BindingFlags.SetProperty);
+            CurrentBackendBindings.Add(
+                Expression.Bind(
+                    propInfo,
+                    VisitProbeExpression(context.probeExpression())));
+
+            return null;
+        }
 
         public override Expression VisitProbeDeclaration(VclParser.ProbeDeclarationContext context)
         {
@@ -98,64 +168,6 @@ namespace Im.Proxy.VclCore.Compiler
             return Expression.MemberInit(
                 Expression.New(probeTypeCtor, Expression.Constant($"Anonymous<{CurrentBackendName}>")),
                 CurrentProbeBindings);
-        }
-
-        public override Expression VisitProbeStringVariableExpression(VclParser.ProbeStringVariableExpressionContext context)
-        {
-            base.VisitProbeStringVariableExpression(context);
-
-            var normalisedMemberName = context.name.GetText().Replace("_", "");
-
-            var propInfo = typeof(VclProbe).GetProperty(
-                normalisedMemberName,
-                BindingFlags.Instance |
-                BindingFlags.Public |
-                BindingFlags.IgnoreCase |
-                BindingFlags.SetProperty);
-            CurrentProbeBindings.Add(
-                Expression.Bind(
-                    propInfo,
-                    VisitStringLiteral(context.stringLiteral())));
-
-            return null;
-        }
-
-        public override Expression VisitProbeIntegerVariableExpression(VclParser.ProbeIntegerVariableExpressionContext context)
-        {
-            base.VisitProbeIntegerVariableExpression(context);
-
-            var normalisedMemberName = context.name.GetText().Replace("_", "");
-            var propInfo = typeof(VclProbe).GetProperty(
-                normalisedMemberName,
-                BindingFlags.Instance |
-                BindingFlags.Public |
-                BindingFlags.IgnoreCase |
-                BindingFlags.SetProperty);
-            CurrentProbeBindings.Add(
-                Expression.Bind(
-                    propInfo,
-                    VisitIntegerLiteral(context.integerLiteral())));
-
-            return null;
-        }
-
-        public override Expression VisitProbeTimeVariableExpression(VclParser.ProbeTimeVariableExpressionContext context)
-        {
-            base.VisitProbeTimeVariableExpression(context);
-
-            var normalisedMemberName = context.name.GetText().Replace("_", "");
-            var propInfo = typeof(VclProbe).GetProperty(
-                normalisedMemberName,
-                BindingFlags.Instance |
-                BindingFlags.Public |
-                BindingFlags.IgnoreCase |
-                BindingFlags.SetProperty);
-            CurrentProbeBindings.Add(
-                Expression.Bind(
-                    propInfo,
-                    VisitTimeLiteral(context.timeLiteral())));
-
-            return null;
         }
     }
 }

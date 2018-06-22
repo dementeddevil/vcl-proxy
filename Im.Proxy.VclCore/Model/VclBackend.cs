@@ -25,7 +25,7 @@ namespace Im.Proxy.VclCore.Model
 
         public string ProxyHeader { get; set; }
 
-        public VclProbe Probe { get; set; }
+        public VclProbe Probe { get; set; } = new VclProbe("default");
 
         public int MaxConnections { get; set; }
 

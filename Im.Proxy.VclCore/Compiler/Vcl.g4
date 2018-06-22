@@ -34,15 +34,47 @@ backendElementList
 	;
 
 backendElement
-	:	'.' key='host' '=' StringConstant ';'
-	|	'.' key='port' '=' ('http' | 'https') ';'
-	|	'.' key='host_header' '=' constantExpression ';'
-	|	'.' key='connect_timeout' '=' TimeConstant ';'
-	|	'.' key='first_byte_timeout' '=' TimeConstant ';'
-	|	'.' key='between_bytes_timeout' '=' TimeConstant ';'
-	|	'.' key='proxy_header' '=' StringConstant ';'
-	|	'.' key='max_connections' '=' IntegerConstant ';'
-	|	'.' key='probe' '=' probeExpression ';'
+	:	'.' backendVariableExpression ';'
+	;
+
+backendVariableExpression
+	:	backendStringVariableExpression
+	|	backendIntegerVariableExpression
+	|	backendTimeVariableExpression
+	|	backendProbeVariableExpression
+	;
+
+backendStringVariableExpression
+	:	name=backendStringVariableName '=' value=stringLiteral
+	;
+
+backendIntegerVariableExpression
+	:	name=backendIntegerVariableName '=' value=integerLiteral
+	;
+
+backendTimeVariableExpression
+	:	name=backendTimeVariableName '=' value=timeLiteral
+	;
+
+backendProbeVariableExpression
+	:	name='probe' '=' value=probeExpression
+	;
+
+backendStringVariableName
+	:	'host'
+	|	'port'
+	|	'host_header'
+	|	'proxy_header'
+	;
+
+backendIntegerVariableName
+	:	'max_connections'
+	;
+
+backendTimeVariableName
+	:	'connect_timeout'
+	|	'first_byte_timeout'
+	|	'between_bytes_timeout'
 	;
 
 probeExpression

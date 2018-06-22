@@ -16,10 +16,19 @@ namespace Im.Proxy.VclCore.Compiler
     /// <seealso cref="VclBaseExpressionVisitor" />
     public class VclCompileNamedProbeObjects : VclBaseExpressionVisitor
     {
-        private IList<MemberBinding> CurrentProbeBindings { get; } = new List<MemberBinding>();
+        protected IList<MemberBinding> CurrentProbeBindings { get; } = new List<MemberBinding>();
 
         public IDictionary<string, Expression> ProbeExpressions { get; } =
             new Dictionary<string, Expression>(StringComparer.OrdinalIgnoreCase);
+
+        public VclCompileNamedProbeObjects()
+        {
+        }
+
+        protected VclCompileNamedProbeObjects(IDictionary<string, Expression> probeExpressions)
+        {
+            ProbeExpressions = probeExpressions;
+        }
 
         public override Expression VisitProbeDeclaration(VclParser.ProbeDeclarationContext context)
         {
