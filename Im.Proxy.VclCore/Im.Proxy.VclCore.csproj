@@ -101,6 +101,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Compiler\VclBaseExpressionVisitor.cs" />
+    <Compile Include="Compiler\VclCompileNamedBackendObjects.cs" />
     <Compile Include="Compiler\VclCompileNamedProbeObjects.cs" />
     <Compile Include="Compiler\VclHandlerCompiler.cs" />
     <Compile Include="Compiler\VclHandlerCompilerContext.cs" />

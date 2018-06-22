@@ -1,19 +1,27 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using Im.Proxy.VclCore.Model;
 
-namespace Im.Proxy.VclCore
+namespace Im.Proxy.VclCore.Model
 {
+    /// <summary>
+    /// Helper class used to conduct health-check probe against a backend.
+    /// </summary>
+    /// <remarks>
+    /// Probe instances are not shared between backend objects.
+    /// Each backend receives it's own copy of a probe - even when a named
+    /// probe has multiple references.
+    /// </remarks>
     public class VclProbe
     {
+        private VclBackend _backend;
+        private readonly Queue<bool> _healthHistory = new Queue<bool>();
         private int? _initial;
 
-        public VclProbe(string name = null)
+        public VclProbe(string name)
         {
-            Name = name ?? "inline";
+            Name = name;
         }
 
         public string Name { get; }
@@ -32,42 +40,52 @@ namespace Im.Proxy.VclCore
 
         public int Threshold { get; set; } = 3;
 
+        public DateTime LastProbedWhenUtc { get; private set; } = DateTime.UtcNow;
+
+        public DateTime NextProbeDueWhenUtc => LastProbedWhenUtc + Interval;
+
         public void Initialise(VclBackend backend)
         {
+            // Cache the backend
+            _backend = backend;
+
             // Setup the initial number of healthy responses
-            backend.HealthCheckHistory.Clear();
+            _healthHistory.Clear();
             if (Initial > 0)
             {
                 for (var loop = 0; loop < Initial; ++loop)
                 {
-                    backend.HealthCheckHistory.Enqueue(true);
+                    _healthHistory.Enqueue(true);
                 }
             }
         }
 
-        public async Task Execute(VclBackend backend)
+        public async Task Execute()
         {
             // Issue probe request
-            var httpClient = backend.Client;
+            var httpClient = _backend.Client;
             httpClient.Timeout = Timeout;
             var responseMessage = await httpClient
                 .GetAsync(Url)
                 .ConfigureAwait(false);
 
             // Update backend with probe result
-            AddProbeResult(backend, (int) responseMessage.StatusCode == ExpectedResponse);
+            AddProbeResult((int) responseMessage.StatusCode == ExpectedResponse);
+
+            // Update last probe timestamp
+            LastProbedWhenUtc = DateTime.UtcNow;
         }
 
-        private void AddProbeResult(VclBackend backend, bool healthy)
+        private void AddProbeResult(bool healthy)
         {
-            backend.HealthCheckHistory.Enqueue(healthy);
+            _healthHistory.Enqueue(healthy);
 
-            while (backend.HealthCheckHistory.Count > Window)
+            while (_healthHistory.Count > Window)
             {
-                backend.HealthCheckHistory.Dequeue();
+                _healthHistory.Dequeue();
             }
 
-            backend.Healthy = backend.HealthCheckHistory.Count(v => v) >= Threshold;
+            _backend.Healthy = _healthHistory.Count(v => v) >= Threshold;
         }
     }
 }

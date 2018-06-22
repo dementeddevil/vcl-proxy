@@ -59,7 +59,7 @@ probeInlineExpression
 	;
 
 probeDeclaration
-	:	'probe' Identifier '{' probeElementList '}'
+	:	'probe' Identifier probeInlineExpression
 	;
 
 probeElementList

@@ -5,33 +5,52 @@ using System.Net.Http;
 namespace Im.Proxy.VclCore.Model
 {
     /// <summary>
-    /// 
+    /// <c>VclBackend</c> represents a backend server resource
     /// </summary>
-    /// <remarks>
-    /// Represents a backend server
-    /// </remarks>
     public class VclBackend
     {
-        public VclBackend(string host, int port)
-        {
-            Host = host;
-            Port = port;
+        private HttpClient _httpClient;
 
-            Client.BaseAddress = 
-                new UriBuilder(
-                    port == 443 ? "https:" : "http:",
-                    host,
-                    port).Uri;
-        }
+        public string Host { get; set; }
 
-        public string Host { get; }
+        public string Port { get; set; }
 
-        public int Port { get; }
+        public string HostHeader { get; set; }
+
+        public TimeSpan ConnectTimeout { get; set; }
+
+        public TimeSpan FirstByteTimeout { get; set; }
+
+        public TimeSpan BetweenBytesTimeout { get; set; }
+
+        public string ProxyHeader { get; set; }
+
+        public VclProbe Probe { get; set; }
+
+        public int MaxConnections { get; set; }
 
         public bool Healthy { get; set; }
 
-        public Queue<bool> HealthCheckHistory { get; } = new Queue<bool>();
+        public HttpClient Client
+        {
+            get
+            {
+                if (_httpClient == null)
+                {
+                    _httpClient =
+                        new HttpClient
+                        {
+                            BaseAddress = new UriBuilder(Port + ":", Host).Uri
+                        };
+                }
 
-        public HttpClient Client { get; } = new HttpClient();
+                return _httpClient;
+            }
+        }
+
+        public void Initialise()
+        {
+            Probe.Initialise(this);
+        }
     }
 }
