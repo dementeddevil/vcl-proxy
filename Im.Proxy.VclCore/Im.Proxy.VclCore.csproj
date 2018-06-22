@@ -101,6 +101,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Compiler\VclCompileNamedProbeObjects.cs" />
+    <Compile Include="Compiler\VclHandlerCompiler.cs" />
+    <Compile Include="Compiler\VclHandlerCompilerContext.cs" />
     <Compile Include="Model\VclBackend.cs" />
     <Compile Include="Model\VclBackendRequest.cs" />
     <Compile Include="Model\VclBackendResponse.cs" />
