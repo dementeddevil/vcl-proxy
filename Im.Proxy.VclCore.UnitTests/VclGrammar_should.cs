@@ -125,7 +125,7 @@ namespace Im.Proxy.VclCore.UnitTests
             var vclText =
                 "probe myprobe {" +
                 "    .url = \"/healthcheck/\";" +
-                "    .window = 100;" +
+                "    .window = 10;" +
                 "    .expected_response = 201;" +
                 "    .timeout = 5s;" +
                 "    .interval = 1m;" +
