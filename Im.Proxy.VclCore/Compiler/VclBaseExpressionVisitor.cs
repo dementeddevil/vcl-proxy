@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq.Expressions;
+using Antlr4.Runtime.Misc;
 
 namespace Im.Proxy.VclCore.Compiler
 {
@@ -9,6 +10,12 @@ namespace Im.Proxy.VclCore.Compiler
         {
             base.VisitStringLiteral(context);
             return Expression.Constant(context.StringConstant().GetText().Trim('"'));
+        }
+
+        public override Expression VisitSynthenticLiteral([NotNull] VclParser.SynthenticLiteralContext context)
+        {
+            base.VisitSynthenticLiteral(context);
+            return Expression.Constant(context.SyntheticString().GetText().Trim('"', '{', '}'));
         }
 
         public override Expression VisitIntegerLiteral(VclParser.IntegerLiteralContext context)
@@ -55,5 +62,10 @@ namespace Im.Proxy.VclCore.Compiler
             return Expression.Constant(value);
         }
 
+        public override Expression VisitBooleanLiteral(VclParser.BooleanLiteralContext context)
+        {
+            base.VisitBooleanLiteral(context);
+            return Expression.Constant(Boolean.Parse(context.GetText()));
+        }
     }
 }

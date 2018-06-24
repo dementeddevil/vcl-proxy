@@ -17,7 +17,7 @@ declaration
 	:	includeDeclaration
 	|	backendDeclaration
 	|	probeDeclaration
-	|	functionDeclaration
+	|	procedureDeclaration
 	;
 
 includeDeclaration
@@ -138,31 +138,27 @@ probeIntegerVariableName
 	;
 
 aclDeclaration
-	:	'acl' Identifier '{' aclElementList '}'
+	:	'acl' name=Identifier '{' aclElementList '}'
 	;
 
 aclElementList
-	:	ignoreableAclElement
-	|	aclElementList ignoreableAclElement
-	;
-
-ignoreableAclElement
 	:	aclElement
-	|	'(' aclElement ')'
+	|	aclElementList aclElement
 	;
 
 aclElement
-	:	('!')? ipAddressOrHost
-	|	subnet=SubnetMask
+	:	exclude=AclExclude? aclIpAddressOrHost
 	;
 
-ipAddressOrHost
-	:	StringConstant
-	|	IpAddress
+aclIpAddressOrHost
+	:	host=StringConstant				# AclEntryNonIgnorableHost
+	|	'(' host=StringConstant ')'		# AclEntryIgnorableHost
+	|	address=IpAddress				# AclEntryIpAddress
+	|	subnet=SubnetMask				# AclEntrySubnetMask
 	;
 
-functionDeclaration
-	:	'sub' Identifier compoundStatement
+procedureDeclaration
+	:	'sub' name=Identifier compoundStatement
 	;
 
 statement
@@ -182,11 +178,11 @@ expressionStatement
 	;
 
 ifStatement
-	:	'if' '(' expression ')' statement (('elif' | 'else if') '(' expression ')' statement)? ('else' statement)?
+	:	'if' '(' test=expression ')' ifTrue=statement (('elif' | 'else if') '(' otherTest=expression ')' otherTrue=statement)* ('else' else=statement)?
 	;
 
 setStatement
-	:	'set' dottedExpression '=' expression ';'
+	:	'set' memberAccessExpression '=' expression ';'
 	;
 
 removeStatement
@@ -198,7 +194,7 @@ errorStatement
 	;
 
 syntheticStatement
-	:	'synthetic' syntheticExpression ';'
+	:	'synthetic' stringLiteral ';'
 	;
 
 callStatement
@@ -257,99 +253,100 @@ blockItem
 
 expression
 	:	assignmentExpression
+	|	nonAssignmentExpression
 	;
 
 assignmentExpression
+	:	lhs=unaryExpression op=assignmentOperator rhs=expression
+	;
+
+nonAssignmentExpression
 	:	conditionalExpression
-	|	unaryExpression assignmentOperator assignmentExpression
 	;
 
 assignmentOperator
-	:	'='
+	:	'=' | '+=' | '-='
 	;
 
 conditionalExpression
-	:	logicalOrExpression
+	:	conditionalOrExpression ('?' ifTrue=expression ':' ifFalse=expression)?
 	;
 
-primaryExpression
-	:	dottedExpression
-	|	constantExpression
-	|	'(' expression ')'
+conditionalOrExpression
+	:	lhs=conditionalAndExpression ('||' rhs=conditionalAndExpression)*
 	;
 
-dottedExpression
-	:	Identifier
-	|	dottedExpression '.' Identifier
+conditionalAndExpression
+	:	lhs=inclusiveOrExpression ('&&' rhs=inclusiveOrExpression)*
 	;
 
-constantExpression
-	:	StringConstant
-	|	IntegerConstant
-	|	TimeConstant
-	|	BooleanConstant
+inclusiveOrExpression
+	:	lhs=exclusiveOrExpression ('|' rhs=exclusiveOrExpression)*
 	;
 
-unaryExpression
-	:	primaryExpression
-	|	unaryOperator castExpression
+exclusiveOrExpression
+	:	lhs=andExpression ('^' rhs=andExpression)*
 	;
 
-unaryOperator
-	:	'!'
-	;
-
-castExpression
-	:	unaryExpression
+andExpression
+	:	lhs=equalityExpression ('&' rhs=equalityExpression)*
 	;
 
 equalityExpression
-	:	castExpression
-	|	equalityExpression op=equalityOperator castExpression
+	:	lhs=relationalExpression (op=('==' | '!=') rhs=relationalExpression)*	# EqualStandardExpression
+	|	lhs=relationalExpression (op=('~' | '!~') rhs=regularExpression)*			# MatchRegexExpression
+	|	lhs=relationalExpression (op=('~' | '!~') rhs=aclReferenceExpression)*		# MatchAclExpression
 	;
 
-equalityOperator
-	:	'=='
-	|	'!='
-	|	'~'
-	|	'!~'
+relationalExpression
+	:	lhs=additiveExpression (op=('<' | '>' | '<=' | '>=') rhs=additiveExpression)*
 	;
 
-logicalAndExpression
-	:	equalityExpression
-	|	logicalAndExpression '&&' equalityExpression
+additiveExpression
+	:	lhs=multiplicativeExpression (op=('+' | '-') rhs=multiplicativeExpression)*
 	;
 
-logicalOrExpression
-	:	logicalAndExpression
-	|	logicalOrExpression '||' logicalAndExpression
+multiplicativeExpression
+	:	lhs=unaryExpression (op=('*' | '/' | '%') rhs=unaryExpression)*
 	;
 
-matchExpression
-	:	regularExpression
-	|	backendReferenceExpression
+unaryExpression
+	:	primaryExpression			# UnaryPassthrough
+	|	op='!' unaryExpression		# UnaryNegateExpression
+	;
+
+primaryExpression
+	:	memberAccessExpression
+	|	literalExpression
+	|	'(' expression ')'
+	;
+
+memberAccessExpression
+	:	lhs=Identifier ('.' rhs=Identifier)*
+	;
+
+literalExpression
+	:	stringLiteral
+	|	synthenticLiteral
+	|	integerLiteral
+	|	timeLiteral
+	|	booleanLiteral
 	;
 
 regularExpression
 	:	StringConstant
 	;
 
-backendReferenceExpression
-	:	Identifier
-	;
-
-syntheticExpression
-	:	syntheticSubExpression
-	|	syntheticExpression '+' syntheticSubExpression
-	;
-
-syntheticSubExpression
-	:	SyntheticString
-	|	primaryExpression
+aclReferenceExpression
+	:	name=Identifier
 	;
 
 stringLiteral
 	:	StringConstant
+	;
+
+synthenticLiteral
+	:	SyntheticString
 	;
 
 integerLiteral
@@ -358,6 +355,10 @@ integerLiteral
 
 timeLiteral
 	:	TimeConstant
+	;
+
+booleanLiteral
+	:	BooleanConstant
 	;
 
 /*
@@ -383,6 +384,10 @@ BooleanConstant
 
 StringConstant
 	:	'"' CharacterSequence? '"'
+	;
+
+AclExclude
+	:	'!'
 	;
 
 fragment
