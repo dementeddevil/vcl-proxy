@@ -66,6 +66,49 @@ namespace Im.Proxy.VclCore.Compiler
             return null;
         }
 
+        public override Expression VisitIfStatement(VclParser.IfStatementContext context)
+        {
+            base.VisitIfStatement(context);
+            if (context.otherTest.IsEmpty && context.elseStmt.IsEmpty)
+            {
+                return Expression.IfThen(
+                    VisitExpression(context.test),
+                    VisitStatement(context.ifTrue));
+            }
+
+            if (context.otherTest.IsEmpty)
+            {
+                return Expression.IfThenElse(
+                    VisitExpression(context.test),
+                    VisitStatement(context.ifTrue),
+                    VisitStatement(context.elseStmt));
+            }
+
+            return Expression.IfThenElse(
+                VisitExpression(context.test),
+                VisitStatement(context.ifTrue),
+                Expression.IfThenElse(
+                    VisitExpression(context.otherTest),
+                    VisitStatement(context.otherTrue),
+                    VisitStatement(context.elseStmt)));
+        }
+
+        public override Expression VisitSetStatement(VclParser.SetStatementContext context)
+        {
+            base.VisitSetStatement(context);
+            var lhs = VisitMemberAccessExpression(context.lhs);
+            var rhs = VisitExpression(context.rhs);
+            return Expression.Assign(lhs, rhs);
+        }
+
+        public override Expression VisitRemoveStatement(VclParser.RemoveStatementContext context)
+        {
+            base.VisitRemoveStatement(context);
+            var lhs = VisitMemberAccessExpression(context.id);
+            var rhs = Expression.Constant(null, typeof(string));
+            return Expression.Assign(lhs, rhs);
+        }
+
         public override Expression VisitExpressionStatement(VclParser.ExpressionStatementContext context)
         {
             base.VisitExpressionStatement(context);

@@ -178,15 +178,15 @@ expressionStatement
 	;
 
 ifStatement
-	:	'if' '(' test=expression ')' ifTrue=statement (('elif' | 'else if') '(' otherTest=expression ')' otherTrue=statement)* ('else' else=statement)?
+	:	'if' '(' test=expression ')' ifTrue=statement (('elif' | 'else if') '(' otherTest=expression ')' otherTrue=statement)* ('else' elseStmt=statement)?
 	;
 
 setStatement
-	:	'set' memberAccessExpression '=' expression ';'
+	:	'set' lhs=memberAccessExpression '=' rhs=expression ';'
 	;
 
 removeStatement
-	:	('remove' | 'unset') Identifier ';'
+	:	('remove' | 'unset') id=memberAccessExpression ';'
 	;
 
 errorStatement
