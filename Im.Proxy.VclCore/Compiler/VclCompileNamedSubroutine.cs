@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Net;
 using System.Reflection;
+using System.Reflection.Emit;
 using System.Text.RegularExpressions;
 using Im.Proxy.VclCore.Model;
 // ReSharper disable AssignNullToNotNullAttribute
@@ -12,13 +13,17 @@ namespace Im.Proxy.VclCore.Compiler
     public class VclCompileNamedSubroutine : VclBaseExpressionVisitor
     {
         private ParameterExpression _vclContextExpression;
-        private IList<Expression> _currentMethodStatementExpressions;
+        private List<Expression> _currentMethodStatementExpressions;
 
         private Expression _currentMemberAccessExpression;
         private int _memberAccessDepth;
+        private TypeBuilder _derivedVclHandlerBuilder;
 
-        public IDictionary<string, IList<Expression>> MethodBodyExpressions { get; } =
-            new Dictionary<string, IList<Expression>>(StringComparer.OrdinalIgnoreCase);
+        public IDictionary<string, MethodBuilder> SubroutineMethodBuilders { get; } =
+            new Dictionary<string, MethodBuilder>(StringComparer.OrdinalIgnoreCase);
+
+        public IDictionary<string, List<Expression>> MethodBodyExpressions { get; } =
+            new Dictionary<string, List<Expression>>(StringComparer.OrdinalIgnoreCase);
 
         public IDictionary<string, Expression> AclFields { get; }
 
@@ -44,7 +49,15 @@ namespace Im.Proxy.VclCore.Compiler
             base.VisitProcedureDeclaration(context);
 
             var name = context.name.Text;
-            MethodBodyExpressions.Add(name, _currentMethodStatementExpressions);
+
+            if (MethodBodyExpressions.ContainsKey(name))
+            {
+                MethodBodyExpressions[name].AddRange(_currentMethodStatementExpressions);
+            }
+            else
+            {
+                MethodBodyExpressions.Add(name, _currentMethodStatementExpressions);
+            }
 
             return null;
         }
@@ -107,6 +120,11 @@ namespace Im.Proxy.VclCore.Compiler
             var lhs = VisitMemberAccessExpression(context.id);
             var rhs = Expression.Constant(null, typeof(string));
             return Expression.Assign(lhs, rhs);
+        }
+
+        public override Expression VisitErrorStatement(VclParser.ErrorStatementContext context)
+        {
+            return base.VisitErrorStatement(context);
         }
 
         public override Expression VisitExpressionStatement(VclParser.ExpressionStatementContext context)
