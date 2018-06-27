@@ -125,6 +125,23 @@ namespace Im.Proxy.VclCore.Compiler
                 expression = mapper.MakeAccessExpression(vclContextExpression, memberName);
                 return true;
             }
+
+            public Expression GetExpression(
+                Expression vclContextExpression,
+                string objectName,
+                string memberName)
+            {
+                if (TryGetExpression(
+                    vclContextExpression,
+                    objectName,
+                    memberName,
+                    out var expression))
+                {
+                    return expression;
+                }
+
+                throw new ArgumentException("Invalid VCL object name.");
+            }
         }
 
         private readonly VclContextObjectMapper _contextObjectMapper = new VclContextObjectMapper();
@@ -240,7 +257,36 @@ namespace Im.Proxy.VclCore.Compiler
 
         public override Expression VisitErrorStatement(VclParser.ErrorStatementContext context)
         {
-            return base.VisitErrorStatement(context);
+            // Parse status code (from int or HttpStatusCode enum value)
+            var statusCodeText = context.statusCode.Text;
+            if (!int.TryParse(statusCodeText, out int statusCode))
+            {
+                if (!Enum.TryParse(statusCodeText, true, out HttpStatusCode statausCodeEnum))
+                {
+                    throw new ArgumentException("Unable to parse status code");
+                }
+
+                statusCode = (int)statausCodeEnum;
+            }
+
+            var statusDescription = context.statusDescription?.Text ?? string.Empty;
+
+            // Error implies instant response
+            return Expression.Block(
+                Expression.Assign(
+                    _contextObjectMapper.GetExpression(
+                        _vclContextExpression,
+                        "resp",
+                        "statusCode"),
+                    Expression.Constant(statusCode)),
+                Expression.Assign(
+                    _contextObjectMapper.GetExpression(
+                        _vclContextExpression,
+                        "resp",
+                        "description"),
+                    Expression.Constant(statusDescription)),
+                Expression.Return(null, Expression.Constant(
+                    VclAction.DeliverContent)));
         }
 
         public override Expression VisitExpressionStatement(VclParser.ExpressionStatementContext context)
