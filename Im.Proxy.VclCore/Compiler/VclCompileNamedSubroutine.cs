@@ -12,6 +12,122 @@ namespace Im.Proxy.VclCore.Compiler
 {
     public class VclCompileNamedSubroutine : VclBaseExpressionVisitor
     {
+        private class VclContextObjectMapper
+        {
+            private class VclObjectMemberMapper
+            {
+                private readonly PropertyInfo _contextPropertyInfo;
+                private readonly IDictionary<string, Lazy<PropertyInfo>> _mapper =
+                    new Dictionary<string, Lazy<PropertyInfo>>(StringComparer.OrdinalIgnoreCase);
+
+                public VclObjectMemberMapper(
+                    PropertyInfo contextPropertyInfo,
+                    Type vclObjectType,
+                    params Tuple<string, string>[] grammarToLogicalEntries)
+                {
+                    _contextPropertyInfo = contextPropertyInfo;
+                    foreach (var item in grammarToLogicalEntries)
+                    {
+                        _mapper.Add(
+                            item.Item1,
+                            new Lazy<PropertyInfo>(() => vclObjectType.GetProperty(item.Item2)));
+                    }
+                }
+
+                public Expression MakeAccessExpression(Expression vclContextObjectExpression, string memberName)
+                {
+                    if (!_mapper.ContainsKey(memberName))
+                    {
+                        throw new ArgumentException("context member not found.");
+                    }
+
+                    return Expression.MakeMemberAccess(
+                        Expression.MakeMemberAccess(
+                            vclContextObjectExpression,
+                            _contextPropertyInfo),
+                        _mapper[memberName].Value);
+                }
+            }
+
+            private readonly IDictionary<string, VclObjectMemberMapper> _contextVariableToMapper =
+                new Dictionary<string, VclObjectMemberMapper>(StringComparer.OrdinalIgnoreCase);
+
+            public VclContextObjectMapper()
+            {
+                _contextVariableToMapper.Add(
+                    "client",
+                    new VclObjectMemberMapper(
+                        typeof(VclContext).GetProperty(nameof(VclContext.Client)),
+                        typeof(VclClient),
+                        new[]
+                        {
+                            new Tuple<string, string>("", ""), 
+                        }));
+                _contextVariableToMapper.Add(
+                    "server",
+                    new VclObjectMemberMapper(
+                        typeof(VclContext).GetProperty(nameof(VclContext.Server)),
+                        typeof(VclServer),
+                        new[]
+                        {
+                            new Tuple<string, string>("", ""),
+                        }));
+                _contextVariableToMapper.Add(
+                    "req",
+                    new VclObjectMemberMapper(
+                        typeof(VclContext).GetProperty(nameof(VclContext.Request)),
+                        typeof(VclRequest),
+                        new[]
+                        {
+                            new Tuple<string, string>("", ""),
+                        }));
+                _contextVariableToMapper.Add(
+                    "resp",
+                    new VclObjectMemberMapper(
+                        typeof(VclContext).GetProperty(nameof(VclContext.Response)),
+                        typeof(VclResponse),
+                        new[]
+                        {
+                            new Tuple<string, string>("", ""),
+                        }));
+                _contextVariableToMapper.Add(
+                    "bereq",
+                    new VclObjectMemberMapper(
+                        typeof(VclContext).GetProperty(nameof(VclContext.BackendRequest)),
+                        typeof(VclBackendRequest),
+                        new[]
+                        {
+                            new Tuple<string, string>("", ""),
+                        }));
+                _contextVariableToMapper.Add(
+                    "beresp",
+                    new VclObjectMemberMapper(
+                        typeof(VclContext).GetProperty(nameof(VclContext.BackendResponse)),
+                        typeof(VclBackendResponse),
+                        new[]
+                        {
+                            new Tuple<string, string>("", ""),
+                        }));
+            }
+
+            public bool TryGetExpression(
+                Expression vclContextExpression,
+                string objectName,
+                string memberName,
+                out Expression expression)
+            {
+                if (!_contextVariableToMapper.TryGetValue(objectName, out var mapper))
+                {
+                    expression = null;
+                    return false;
+                }
+
+                expression = mapper.MakeAccessExpression(vclContextExpression, memberName);
+                return true;
+            }
+        }
+
+        private readonly VclContextObjectMapper _contextObjectMapper = new VclContextObjectMapper();
         private ParameterExpression _vclContextExpression;
         private List<Expression> _currentMethodStatementExpressions;
 
@@ -26,21 +142,6 @@ namespace Im.Proxy.VclCore.Compiler
             new Dictionary<string, List<Expression>>(StringComparer.OrdinalIgnoreCase);
 
         public IDictionary<string, Expression> AclFields { get; }
-
-        public override Expression VisitAclDeclaration(VclParser.AclDeclarationContext context)
-        {
-            return null;
-        }
-
-        public override Expression VisitBackendDeclaration(VclParser.BackendDeclarationContext context)
-        {
-            return null;
-        }
-
-        public override Expression VisitProbeDeclaration(VclParser.ProbeDeclarationContext context)
-        {
-            return null;
-        }
 
         public override Expression VisitProcedureDeclaration(VclParser.ProcedureDeclarationContext context)
         {
@@ -59,6 +160,21 @@ namespace Im.Proxy.VclCore.Compiler
                 MethodBodyExpressions.Add(name, _currentMethodStatementExpressions);
             }
 
+            return null;
+        }
+
+        public override Expression VisitAclDeclaration(VclParser.AclDeclarationContext context)
+        {
+            return null;
+        }
+
+        public override Expression VisitBackendDeclaration(VclParser.BackendDeclarationContext context)
+        {
+            return null;
+        }
+
+        public override Expression VisitProbeDeclaration(VclParser.ProbeDeclarationContext context)
+        {
             return null;
         }
 
@@ -436,48 +552,32 @@ namespace Im.Proxy.VclCore.Compiler
             if (_memberAccessDepth == 0)
             {
                 var identifier = context.lhs.Text;
-                switch (identifier)
-                {
-                    case "client":
-                        _currentMemberAccessExpression =
-                            Expression.MakeMemberAccess(
-                                _vclContextExpression,
-                                typeof(VclContext).GetProperty(nameof(VclContext.Client)));
-                        break;
-                    case "server":
-                        _currentMemberAccessExpression =
-                            Expression.MakeMemberAccess(
-                                _vclContextExpression,
-                                typeof(VclContext).GetProperty(nameof(VclContext.Server)));
-                        break;
-                    case "req":
-                        _currentMemberAccessExpression =
-                            Expression.MakeMemberAccess(
-                                _vclContextExpression,
-                                typeof(VclContext).GetProperty(nameof(VclContext.Request)));
-                        break;
-                    case "resp":
-                        _currentMemberAccessExpression =
-                            Expression.MakeMemberAccess(
-                                _vclContextExpression,
-                                typeof(VclContext).GetProperty(nameof(VclContext.Response)));
-                        break;
-                    case "bereq":
-                        _currentMemberAccessExpression =
-                            Expression.MakeMemberAccess(
-                                _vclContextExpression,
-                                typeof(VclContext).GetProperty(nameof(VclContext.BackendRequest)));
-                        break;
-                    case "beresp":
-                        _currentMemberAccessExpression =
-                            Expression.MakeMemberAccess(
-                                _vclContextExpression,
-                                typeof(VclContext).GetProperty(nameof(VclContext.BackendResponse)));
-                        break;
+                var memberName = context.rhs.Text;
 
-                    default:
-                        throw new ArgumentException("Unable to determine top-level object");
+                // Lookup based on date
+                if (identifier == "now" && memberName == null)
+                {
+                    // TODO: We might want to delegate this call through a helper
+                    //  to facilitate reliable testing of datetime constructs
+                    return Expression.MakeMemberAccess(
+                        null,
+                        typeof(DateTime).GetProperty(
+                            "UtcNow",
+                            BindingFlags.Static |
+                            BindingFlags.Public));
                 }
+
+                // Finally attempt to perform lookup for context variables
+                if (!_contextObjectMapper.TryGetExpression(
+                    _vclContextExpression, 
+                    identifier,
+                    memberName,
+                    out var expression))
+                {
+                    throw new ArgumentException("Unable to determine top-level object");
+                }
+
+                return expression;
             }
 
             var rhsIdentifier = context.rhs.Text;
