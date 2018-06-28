@@ -144,38 +144,48 @@ namespace Im.Proxy.VclCore.Compiler
             }
         }
 
+        private readonly TypeBuilder _derivedVclHandlerBuilder;
         private readonly VclContextObjectMapper _contextObjectMapper = new VclContextObjectMapper();
         private ParameterExpression _vclContextExpression;
         private List<Expression> _currentMethodStatementExpressions;
 
         private Expression _currentMemberAccessExpression;
         private int _memberAccessDepth;
-        private TypeBuilder _derivedVclHandlerBuilder;
 
         public IDictionary<string, MethodBuilder> SubroutineMethodBuilders { get; } =
             new Dictionary<string, MethodBuilder>(StringComparer.OrdinalIgnoreCase);
 
-        public IDictionary<string, List<Expression>> MethodBodyExpressions { get; } =
-            new Dictionary<string, List<Expression>>(StringComparer.OrdinalIgnoreCase);
+        public IDictionary<string, Tuple<ParameterExpression, List<Expression>>> MethodBodyExpressions { get; } =
+            new Dictionary<string, Tuple<ParameterExpression, List<Expression>>>(StringComparer.OrdinalIgnoreCase);
 
         public IDictionary<string, Expression> AclFields { get; }
 
+        public VclCompileNamedSubroutine(TypeBuilder derivedVclHandlerBuilder)
+        {
+            _derivedVclHandlerBuilder = derivedVclHandlerBuilder;
+        }
+
         public override Expression VisitProcedureDeclaration(VclParser.ProcedureDeclarationContext context)
         {
-            _currentMethodStatementExpressions = new List<Expression>();
-
-            base.VisitProcedureDeclaration(context);
-
+            // Initialise method statement collection
             var name = context.name.Text;
-
-            if (MethodBodyExpressions.ContainsKey(name))
+            if (MethodBodyExpressions.TryGetValue(name, out var entry))
             {
-                MethodBodyExpressions[name].AddRange(_currentMethodStatementExpressions);
+                _vclContextExpression = entry.Item1;
+                _currentMethodStatementExpressions = entry.Item2;
             }
             else
             {
-                MethodBodyExpressions.Add(name, _currentMethodStatementExpressions);
+                _vclContextExpression = Expression.Parameter(typeof(VclContext), "context");
+                _currentMethodStatementExpressions = new List<Expression>();
+                MethodBodyExpressions.Add(name, new Tuple<ParameterExpression, List<Expression>>(
+                    _vclContextExpression, _currentMethodStatementExpressions));
             }
+
+            base.VisitProcedureDeclaration(context);
+
+            _vclContextExpression = null;
+            _currentMethodStatementExpressions = null;
 
             return null;
         }
