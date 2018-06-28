@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Runtime.InteropServices;
 using Antlr4.Runtime;
 using Im.Proxy.VclCore.Model;
 
@@ -11,11 +12,14 @@ namespace Im.Proxy.VclCore.Compiler
 {
     public class VclCompiler
     {
-        public void CompileAndBuildModule(string vclTextFile)
+        public void CompileAndBuildModule(string vclTextFile, string outputssemby)
         {
             var compilerResult = Compile(vclTextFile);
 
-            var moduleBuilder = new ModuleBuilder();
+            var assemblyBuilder= AssemblyBuilder.DefineDynamicAssembly(
+                new AssemblyName(Path.GetFileNameWithoutExtension(outputssemby)),
+                AssemblyBuilderAccess.Save);
+            var moduleBuilder = assemblyBuilder.DefineDynamicModule("Im.VclCore");
 
             // Create derived handler class 
             var typeBuilder = moduleBuilder.DefineType(
@@ -46,7 +50,9 @@ namespace Im.Proxy.VclCore.Compiler
                     MethodAttributes.Family,
                     typeof(void),
                     new Type[0]);
-            initMethodBuilder.SetMethodBody();
+
+            // TODO: Call through subroutine compiler
+            // TODO: making use of previous copilation stagss
         }
 
         private string GetSafeName(string entityKind, string entityName) => $"_{entityKind}_{entityName.Replace('-', '_')}";
