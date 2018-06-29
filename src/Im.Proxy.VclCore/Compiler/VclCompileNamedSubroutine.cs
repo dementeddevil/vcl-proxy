@@ -197,6 +197,7 @@ namespace Im.Proxy.VclCore.Compiler
         private Expression _currentMemberAccessExpression;
         private int _memberAccessDepth;
 
+        private LabelTarget _currentMethodReturnTarget;
         private readonly Stack<List<Expression>> _currentCompoundStatementExpressions = new Stack<List<Expression>>();
         private readonly Stack<IDictionary<string, Expression>> _currentCompoundStatementVariables =
             new Stack<IDictionary<string, Expression>>();
@@ -220,13 +221,14 @@ namespace Im.Proxy.VclCore.Compiler
             var name = context.name.Text;
             if (!MethodBodyExpressions.TryGetValue(name, out var entry))
             {
-                entry = new Tuple<ParameterExpression, List<Expression>>(
+               entry = new Tuple<ParameterExpression, List<Expression>>(
                     Expression.Parameter(typeof(VclContext), "context"),
                     new List<Expression>());
                 MethodBodyExpressions.Add(name, entry);
             }
 
             _vclContextExpression = entry.Item1;
+            _currentMethodReturnTarget = Expression.Label(typeof(VclAction));
             try
             {
                 // Build method body
@@ -235,6 +237,7 @@ namespace Im.Proxy.VclCore.Compiler
             }
             finally
             {
+                _currentMethodReturnTarget = null;
                 _vclContextExpression = null;
             }
             return null;
@@ -255,20 +258,36 @@ namespace Im.Proxy.VclCore.Compiler
             return null;
         }
 
+        public override Expression VisitReturnStatement(VclParser.ReturnStatementContext context)
+        {
+            // If we have no return state then we must be in a custom function
+            if (context.returnStateExpression() == null)
+            {
+                // What we actually return here is VclAction.NoOp
+                return Expression.Return(
+                    _currentMethodReturnTarget,
+                    Expression.Constant(VclAction.NoOp));
+            }
+
+            // Otherwise call through base class
+            return base.VisitReturnStatement(context);
+        }
+
         public override Expression VisitSimpleReturnStateExpression(VclParser.SimpleReturnStateExpressionContext context)
         {
             base.VisitSimpleReturnStateExpression(context);
 
-            var action = context.GetText().Replace("-", "");
-            return Expression.Return(null, Expression.Constant(
-                Enum.Parse(typeof(VclAction), action, true)));
+            var action = context.GetText().Replace("-", string.Empty);
+            return Expression.Return(
+                _currentMethodReturnTarget,
+                Expression.Constant(Enum.Parse(typeof(VclAction), action, true)));
         }
 
         public override Expression VisitComplexReturnStateExpression(VclParser.ComplexReturnStateExpressionContext context)
         {
             base.VisitComplexReturnStateExpression(context);
 
-            // Setup delivery text body and suitable status code
+            // TODO: Setup delivery text body and suitable status code
             return null;
         }
 
@@ -399,6 +418,7 @@ namespace Im.Proxy.VclCore.Compiler
         {
             base.VisitRemoveStatement(context);
             var lhs = VisitMemberAccessExpression(context.id);
+            // TODO: Ensure we match type with LHS
             var rhs = Expression.Constant(null, typeof(string));
             return Expression.Assign(lhs, rhs);
         }
@@ -433,8 +453,9 @@ namespace Im.Proxy.VclCore.Compiler
                         "resp",
                         "description"),
                     Expression.Constant(statusDescription)),
-                Expression.Return(null, Expression.Constant(
-                    VclAction.DeliverContent)));
+                Expression.Return(
+                    _currentMethodReturnTarget,
+                    Expression.Constant(VclAction.DeliverContent)));
         }
 
         public override Expression VisitExpressionStatement(VclParser.ExpressionStatementContext context)

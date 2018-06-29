@@ -12,6 +12,7 @@ namespace Im.Proxy.VclCore
 {
     public enum VclAction
     {
+        NoOp,
         Restart,
         Receive,
         Hash,

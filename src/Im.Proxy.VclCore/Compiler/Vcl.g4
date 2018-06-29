@@ -1,5 +1,9 @@
 grammar Vcl;
 
+@parser::members{
+	public bool InCustomFunction { get; set; }
+}
+
 /*
  * Parser Rules
  */
@@ -158,11 +162,13 @@ aclIpAddressOrHost
 	;
 
 procedureDeclaration
-	:	'sub' name=Identifier compoundStatement
+	:	'sub' name=VclIdentifier compoundStatement		{InCustomFunction = false;}
+	|	'sub' name=Identifier compoundStatement			{InCustomFunction = true;}
 	;
 
 statement
 	:	expressionStatement
+	|	varStatement
 	|	ifStatement
 	|	setStatement
 	|	removeStatement
@@ -206,7 +212,8 @@ callStatement
 	;
 
 returnStatement
-	:	'return' '(' returnStateExpression ')' ';'
+	:	{InCustomFunction}? 'return' ';'
+	|	'return' '(' returnStateExpression ')' ';'
 	;
 
 returnStateExpression
@@ -320,9 +327,26 @@ unaryExpression
 	;
 
 primaryExpression
-	:	memberAccessExpression
+	:	globalFunctionExpression
+	|	memberAccessExpression
 	|	literalExpression
 	|	'(' expression ')'
+	;
+
+globalFunctionExpression
+	:	'boltsort.sort' '(' url=stringLiteral ')'															# GlobalUrlSort
+	|	'cstr_escape' '(' cstr=stringLiteral ')'															# GlobalStringEscape
+	|	'http_status_when' '(' statusCode=integerLiteral ',' commaSeparatedStatusCodes=stringLiteral ')'	# GlobalHttpStatusWhen
+	|	'std.atoi' '(' text=stringLiteral ')'																# GlobalAtoI
+	|	'std.strstr' '(' haystack=stringLiteral ',' needle=stringLiteral ')'								# GlobalStrStr
+	|	'std.strtol' '(' text=stringLiteral ',' base=integerLiteral ')'										# GlobalStrToL
+	|	'std.tolower' '(' text=stringLiteral ')'															# GlobalToLower
+	|	'std.toupper' '(' text=stringLiteral ')'															# GlobalToUpper
+	|	('std.ip' | 'std.str2ip') '(' address=stringLiteral ',' fallback=stringLiteral ')'					# GlobalStrToIp
+	|	'std.strlen' '(' text=stringLiteral ')'																# GlobalStrLen
+	|	'subfield' '(' header=stringLiteral ',' fieldName=stringLiteral (',' sep=stringLiteral)? ')'		# GlobalSubField
+	|	'urlencode' '(' text=stringLiteral ')'																# GlobalUrlEncode
+	|	'urldecode' '(' text=stringLiteral ')'																# GlobalUrlDecode
 	;
 
 memberAccessExpression
@@ -368,6 +392,10 @@ booleanLiteral
 /*
  * Lexer Rules
  */
+
+VclIdentifier
+	:	'vcl_' IdentifierNondigit IdentifierHypen*
+	;
 
 Identifier
     :   IdentifierNondigit IdentifierHypen*
