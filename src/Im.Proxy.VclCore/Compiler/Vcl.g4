@@ -177,6 +177,10 @@ expressionStatement
 	:	expression? ';'
 	;
 
+varStatement
+	:	'declare' 'local' 'var.' name=Identifier type=('BOOL' | 'INTEGER' | 'FLOAT' | 'TIME' | 'RTIME' | 'STRING') ';'
+	;
+
 ifStatement
 	:	'if' '(' test=expression ')' ifTrue=statement (('elseif' | 'elsif' | 'elif') '(' otherTest=expression ')' otherTrue=statement)* ('else' elseStmt=statement)?
 	;
@@ -269,7 +273,7 @@ assignmentOperator
 	;
 
 conditionalExpression
-	:	conditionalOrExpression ('?' ifTrue=expression ':' ifFalse=expression)?
+	:	'if' '(' conditionalOrExpression ',' ifTrue=expression ',' ifFalse=expression ')'
 	;
 
 conditionalOrExpression

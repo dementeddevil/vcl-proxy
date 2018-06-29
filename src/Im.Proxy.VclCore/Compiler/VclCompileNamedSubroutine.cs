@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Net;
@@ -6,6 +7,8 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Text.RegularExpressions;
 using Im.Proxy.VclCore.Model;
+using Expression = System.Linq.Expressions.Expression;
+
 // ReSharper disable AssignNullToNotNullAttribute
 
 namespace Im.Proxy.VclCore.Compiler
@@ -190,10 +193,13 @@ namespace Im.Proxy.VclCore.Compiler
         private readonly TypeBuilder _derivedVclHandlerBuilder;
         private readonly VclContextObjectMapper _contextObjectMapper = new VclContextObjectMapper();
         private ParameterExpression _vclContextExpression;
-        private List<Expression> _currentMethodStatementExpressions;
 
         private Expression _currentMemberAccessExpression;
         private int _memberAccessDepth;
+
+        private readonly Stack<List<Expression>> _currentCompoundStatementExpressions = new Stack<List<Expression>>();
+        private readonly Stack<IDictionary<string, Expression>> _currentCompoundStatementVariables =
+            new Stack<IDictionary<string, Expression>>();
 
         public IDictionary<string, MethodBuilder> SubroutineMethodBuilders { get; } =
             new Dictionary<string, MethodBuilder>(StringComparer.OrdinalIgnoreCase);
@@ -210,26 +216,27 @@ namespace Im.Proxy.VclCore.Compiler
 
         public override Expression VisitProcedureDeclaration(VclParser.ProcedureDeclarationContext context)
         {
-            // Initialise method statement collection
+            // Get or create method body expression
             var name = context.name.Text;
-            if (MethodBodyExpressions.TryGetValue(name, out var entry))
+            if (!MethodBodyExpressions.TryGetValue(name, out var entry))
             {
-                _vclContextExpression = entry.Item1;
-                _currentMethodStatementExpressions = entry.Item2;
-            }
-            else
-            {
-                _vclContextExpression = Expression.Parameter(typeof(VclContext), "context");
-                _currentMethodStatementExpressions = new List<Expression>();
-                MethodBodyExpressions.Add(name, new Tuple<ParameterExpression, List<Expression>>(
-                    _vclContextExpression, _currentMethodStatementExpressions));
+                entry = new Tuple<ParameterExpression, List<Expression>>(
+                    Expression.Parameter(typeof(VclContext), "context"),
+                    new List<Expression>());
+                MethodBodyExpressions.Add(name, entry);
             }
 
-            base.VisitProcedureDeclaration(context);
-
-            _vclContextExpression = null;
-            _currentMethodStatementExpressions = null;
-
+            _vclContextExpression = entry.Item1;
+            try
+            {
+                // Build method body
+                var bodyExpression = VisitCompoundStatement(context.compoundStatement());
+                entry.Item2.Add(bodyExpression);
+            }
+            finally
+            {
+                _vclContextExpression = null;
+            }
             return null;
         }
 
@@ -263,6 +270,94 @@ namespace Im.Proxy.VclCore.Compiler
 
             // Setup delivery text body and suitable status code
             return null;
+        }
+
+        public override Expression VisitCompoundStatement(VclParser.CompoundStatementContext context)
+        {
+            _currentCompoundStatementVariables.Push(new Dictionary<string, Expression>(StringComparer.OrdinalIgnoreCase));
+            _currentCompoundStatementExpressions.Push(new List<Expression>());
+            try
+            {
+                // Build compound statement and return block expression
+                base.VisitCompoundStatement(context);
+                return Expression.Block(_currentCompoundStatementExpressions.Peek());
+            }
+            finally
+            {
+                _currentCompoundStatementVariables.Pop();
+                _currentCompoundStatementExpressions.Pop();
+            }
+        }
+
+        public override Expression VisitStatement(VclParser.StatementContext context)
+        {
+            var expression = base.VisitStatement(context);
+            if (expression != null)
+            {
+                _currentCompoundStatementExpressions.Peek().Add(expression);
+            }
+            return expression;
+        }
+
+        public override Expression VisitVarStatement(VclParser.VarStatementContext context)
+        {
+            var name = context.name.Text;
+
+            // Variable cannot already be declared in this scope or any parent scope
+            foreach (var scope in _currentCompoundStatementVariables)
+            {
+                if (scope.ContainsKey(name))
+                {
+                    throw new ArgumentException(
+                        "Variable with same name is already declared in this scope or a parent scope.");
+                }
+            }
+
+            base.VisitVarStatement(context);
+
+            // Parse type
+            var typeName = context.type.Text;
+            Type type;
+            ConstantExpression initialValueExpression;
+            switch (typeName)
+            {
+                case "BOOL":
+                    type = typeof(bool);
+                    initialValueExpression = Expression.Constant(false);
+                    break;
+                case "INTEGER":
+                    type = typeof(int);
+                    initialValueExpression = Expression.Constant(0);
+                    break;
+                case "FLOAT":
+                    type = typeof(double);
+                    initialValueExpression = Expression.Constant(0.0);
+                    break;
+                case "TIME":
+                    type = typeof(DateTime);
+                    initialValueExpression = Expression.Constant(DateTime.Now);
+                    break;
+                case "RTIME":
+                    type = typeof(TimeSpan);
+                    initialValueExpression = Expression.Constant(TimeSpan.Zero);
+                    break;
+                case "STRING":
+                    type = typeof(string);
+                    initialValueExpression = Expression.Constant(null, typeof(string));
+                    break;
+                default:
+                    throw new InvalidOperationException("Unexpected variable type encountered");
+            }
+
+            // Create variable expression and save in current scope
+            var definitionExpression = Expression.Variable(type, name);
+            _currentCompoundStatementVariables.Peek()[name] = definitionExpression;
+            _currentCompoundStatementExpressions.Peek().Add(definitionExpression);
+
+            // Return the assignment expression
+            var assignmentExpression = Expression.Assign(
+                definitionExpression, initialValueExpression);
+            return assignmentExpression;
         }
 
         public override Expression VisitIfStatement(VclParser.IfStatementContext context)
@@ -348,8 +443,7 @@ namespace Im.Proxy.VclCore.Compiler
 
             if (context.expression() != null)
             {
-                _currentMethodStatementExpressions.Add(
-                    VisitExpression(context.expression()));
+                return VisitExpression(context.expression());
             }
 
             return null;
@@ -656,19 +750,32 @@ namespace Im.Proxy.VclCore.Compiler
                 // Lookup based on date
                 if (identifier == "now" && memberName == null)
                 {
-                    // TODO: We might want to delegate this call through a helper
-                    //  to facilitate reliable testing of datetime constructs
-                    return Expression.MakeMemberAccess(
+                    return Expression.Call(
                         null,
-                        typeof(DateTime).GetProperty(
-                            "UtcNow",
+                        typeof(VclGlobalFunctions).GetMethod(
+                            nameof(VclGlobalFunctions.Now),
                             BindingFlags.Static |
                             BindingFlags.Public));
                 }
 
+                // If identifier is "var" then walk local scope variables
+                if (identifier.Equals("var", StringComparison.OrdinalIgnoreCase))
+                {
+                    foreach (var scope in _currentCompoundStatementVariables)
+                    {
+                        if (scope.TryGetValue(memberName, out var variable))
+                        {
+                            return variable;
+                        }
+                    }
+
+                    // If we get to this point then the variable has not been found
+                    throw new ArgumentException("Undefined variable encountered");
+                }
+
                 // Finally attempt to perform lookup for context variables
                 if (!_contextObjectMapper.TryGetExpression(
-                    _vclContextExpression, 
+                    _vclContextExpression,
                     identifier,
                     memberName,
                     out var expression))
