@@ -1,4 +1,5 @@
 ﻿using System;
+using System.CodeDom;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -16,124 +17,122 @@ namespace Im.Proxy.VclCore.Compiler
     /// <seealso cref="VclBaseExpressionVisitor" />
     public class VclCompileNamedBackendObjects : VclCompileNamedProbeObjects
     {
-        public VclCompileNamedBackendObjects(IDictionary<string, Expression> probeExpressions)
-            : base(probeExpressions)
+        public VclCompileNamedBackendObjects(VclCompilerContext compilerContext)
+            : base(compilerContext)
         {
         }
 
-        public IDictionary<string, Expression> BackendExpressions { get; } =
-            new Dictionary<string, Expression>(StringComparer.OrdinalIgnoreCase);
+        private CodeFieldReferenceExpression _currentBackendReference;
 
-        private IList<MemberBinding> CurrentBackendBindings { get; } = new List<MemberBinding>();
-
-        private string CurrentBackendName { get; set; }
-
-        public override Expression VisitBackendDeclaration(VclParser.BackendDeclarationContext context)
+        public override CodeObject VisitBackendDeclaration(VclParser.BackendDeclarationContext context)
         {
             // Cache the current backend name
-            CurrentBackendName = context.Identifier().GetText();
-            if (BackendExpressions.ContainsKey(CurrentBackendName))
+            var name = context.Identifier().GetText();
+            if (CompilerContext.BackendReferences.ContainsKey(name))
             {
                 throw new ArgumentException("Backend name is not unique");
             }
 
-            CurrentBackendBindings.Clear();
+            // Determine field name
+            var fieldName = name.SafeIdentifier("_backend");
+
+            // Setup current probe object and add to probe mapper
+            CompilerContext.BackendReferences.Add(
+                name,
+                _currentBackendReference =
+                    new CodeFieldReferenceExpression(
+                        new CodeThisReferenceExpression(), fieldName));
+
+            // Create field and add to handler class
+            CompilerContext.HandlerClass.Members.Add(
+                new CodeMemberField(typeof(VclBackend), fieldName)
+                {
+                    Attributes = MemberAttributes.Private,
+                    InitExpression =
+                        new CodeObjectCreateExpression(
+                            typeof(VclBackend),
+                            new CodePrimitiveExpression(name))
+                });
+
+            // Setup probe reference to member variable (used when dealing with inline probe expressions)
+            CurrentProbeExpression =
+                new CodePropertyReferenceExpression(
+                    _currentBackendReference,
+                    nameof(VclBackend.Probe));
+
             base.VisitBackendDeclaration(context);
 
-            var name = context.Identifier().GetText();
-            var backendTypeCtor = typeof(VclBackend).GetConstructor(new[] { typeof(string) });
-            BackendExpressions.Add(
-                name,
-                Expression.MemberInit(
-                    Expression.New(backendTypeCtor),
-                    CurrentBackendBindings));
-
+            _currentBackendReference = null;
             return null;
         }
 
-        public override Expression VisitBackendStringVariableExpression(VclParser.BackendStringVariableExpressionContext context)
+        public override CodeObject VisitBackendStringVariableExpression(VclParser.BackendStringVariableExpressionContext context)
         {
             base.VisitBackendStringVariableExpression(context);
 
             var normalisedMemberName = context.name.GetText().Replace("_", "");
-            var propInfo = typeof(VclProbe).GetProperty(
-                normalisedMemberName,
-                BindingFlags.Instance |
-                BindingFlags.Public |
-                BindingFlags.IgnoreCase |
-                BindingFlags.SetProperty);
-            CurrentBackendBindings.Add(
-                Expression.Bind(
-                    propInfo,
-                    VisitStringLiteral(context.stringLiteral())));
+            CompilerContext.InitStatements.Add(
+                new CodeAssignStatement(
+                    new CodePropertyReferenceExpression(
+                        _currentBackendReference,
+                        normalisedMemberName),
+                    (CodeExpression)VisitStringLiteral(context.stringLiteral())));
 
             return null;
         }
 
-        public override Expression VisitBackendIntegerVariableExpression(VclParser.BackendIntegerVariableExpressionContext context)
+        public override CodeObject VisitBackendIntegerVariableExpression(VclParser.BackendIntegerVariableExpressionContext context)
         {
             base.VisitBackendIntegerVariableExpression(context);
 
             var normalisedMemberName = context.name.GetText().Replace("_", "");
-            var propInfo = typeof(VclProbe).GetProperty(
-                normalisedMemberName,
-                BindingFlags.Instance |
-                BindingFlags.Public |
-                BindingFlags.IgnoreCase |
-                BindingFlags.SetProperty);
-            CurrentBackendBindings.Add(
-                Expression.Bind(
-                    propInfo,
-                    VisitIntegerLiteral(context.integerLiteral())));
+            CompilerContext.InitStatements.Add(
+                new CodeAssignStatement(
+                    new CodePropertyReferenceExpression(
+                        _currentBackendReference,
+                        normalisedMemberName),
+                    (CodeExpression)VisitIntegerLiteral(context.integerLiteral())));
 
             return null;
         }
 
-        public override Expression VisitBackendTimeVariableExpression(VclParser.BackendTimeVariableExpressionContext context)
+        public override CodeObject VisitBackendTimeVariableExpression(VclParser.BackendTimeVariableExpressionContext context)
         {
             base.VisitBackendTimeVariableExpression(context);
 
             var normalisedMemberName = context.name.GetText().Replace("_", "");
-            var propInfo = typeof(VclProbe).GetProperty(
-                normalisedMemberName,
-                BindingFlags.Instance |
-                BindingFlags.Public |
-                BindingFlags.IgnoreCase |
-                BindingFlags.SetProperty);
-            CurrentBackendBindings.Add(
-                Expression.Bind(
-                    propInfo,
-                    VisitTimeLiteral(context.timeLiteral())));
+            CompilerContext.InitStatements.Add(
+                new CodeAssignStatement(
+                    new CodePropertyReferenceExpression(
+                        _currentBackendReference,
+                        normalisedMemberName),
+                    (CodeExpression)VisitTimeLiteral(context.timeLiteral())));
 
             return null;
         }
 
-        public override Expression VisitBackendProbeVariableExpression(VclParser.BackendProbeVariableExpressionContext context)
+        public override CodeObject VisitBackendProbeVariableExpression(VclParser.BackendProbeVariableExpressionContext context)
         {
             base.VisitBackendProbeVariableExpression(context);
 
             var normalisedMemberName = context.name.Text.Replace("_", "");
-            var propInfo = typeof(VclProbe).GetProperty(
-                normalisedMemberName,
-                BindingFlags.Instance |
-                BindingFlags.Public |
-                BindingFlags.IgnoreCase |
-                BindingFlags.SetProperty);
-            CurrentBackendBindings.Add(
-                Expression.Bind(
-                    propInfo,
-                    VisitProbeExpression(context.probeExpression())));
+            CompilerContext.InitStatements.Add(
+                new CodeAssignStatement(
+                    new CodePropertyReferenceExpression(
+                        CurrentProbeExpression,
+                        normalisedMemberName),
+                    (CodeExpression)VisitProbeExpression(context.probeExpression())));
 
             return null;
         }
 
-        public override Expression VisitProbeDeclaration(VclParser.ProbeDeclarationContext context)
+        public override CodeObject VisitProbeDeclaration(VclParser.ProbeDeclarationContext context)
         {
             // Named probe declarations are already handled elsewhere
             return null;
         }
 
-        public override Expression VisitProbeExpression(VclParser.ProbeExpressionContext context)
+        public override CodeObject VisitProbeExpression(VclParser.ProbeExpressionContext context)
         {
             if (context.probeReferenceExpression() != null)
             {
@@ -148,26 +147,15 @@ namespace Im.Proxy.VclCore.Compiler
             return null;
         }
 
-        public override Expression VisitProbeReferenceExpression(VclParser.ProbeReferenceExpressionContext context)
+        public override CodeObject VisitProbeReferenceExpression(VclParser.ProbeReferenceExpressionContext context)
         {
             var probeName = context.probeName.Text;
-            if (!ProbeExpressions.ContainsKey(probeName))
+            if (!CompilerContext.ProbeReferences.ContainsKey(probeName))
             {
                 throw new ArgumentException($"Named probe ({probeName}) not found");
             }
 
-            return ProbeExpressions[probeName];
-        }
-
-        public override Expression VisitProbeInlineExpression(VclParser.ProbeInlineExpressionContext context)
-        {
-            CurrentProbeBindings.Clear();
-            base.VisitProbeInlineExpression(context);
-
-            var probeTypeCtor = typeof(VclProbe).GetConstructor(new[] { typeof(string) });
-            return Expression.MemberInit(
-                Expression.New(probeTypeCtor, Expression.Constant($"Anonymous<{CurrentBackendName}>")),
-                CurrentProbeBindings);
+            return CompilerContext.ProbeReferences[probeName];
         }
     }
 }

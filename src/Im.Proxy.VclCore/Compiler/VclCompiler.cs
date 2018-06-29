@@ -1,4 +1,5 @@
 ﻿using System;
+using System.CodeDom;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq.Expressions;
@@ -16,7 +17,7 @@ namespace Im.Proxy.VclCore.Compiler
         {
             var compilerResult = Compile(vclTextFile);
 
-            var assemblyBuilder= AssemblyBuilder.DefineDynamicAssembly(
+            var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(
                 new AssemblyName(Path.GetFileNameWithoutExtension(outputssemby)),
                 AssemblyBuilderAccess.Save);
             var moduleBuilder = assemblyBuilder.DefineDynamicModule("Im.VclCore");
@@ -57,42 +58,50 @@ namespace Im.Proxy.VclCore.Compiler
 
         private string GetSafeName(string entityKind, string entityName) => $"_{entityKind}_{entityName.Replace('-', '_')}";
 
-        public CompilerResult Compile(string vclTextFile)
+        public VclCompilerContext Compile(string vclTextFile)
         {
             // Compile named probe entries
-            var probeCompiler = new VclCompileNamedProbeObjects();
+            var compilerContext = new VclCompilerContext();
+            var probeCompiler = new VclCompileNamedProbeObjects(compilerContext);
             CompileAndVisit(vclTextFile, probeCompiler);
 
             // Ensure we have a default probe in the named probe entries
-            if (!probeCompiler.ProbeExpressions.ContainsKey("default"))
+            if (!compilerContext.ProbeReferences.ContainsKey("default"))
             {
-                var probeTypeCtor = typeof(VclProbe).GetConstructor(new[] { typeof(string) });
-                probeCompiler.ProbeExpressions.Add(
-                    "default",
-                    Expression.New(probeTypeCtor, Expression.Constant("default")));
+                var fieldName = "default".SafeIdentifier("_probe");
+                compilerContext.ProbeReferences.Add(
+                    "default", new CodeFieldReferenceExpression(
+                        new CodeThisReferenceExpression(), fieldName));
+
+                // Create field and add to handler class
+                compilerContext.HandlerClass.Members.Add(
+                    new CodeMemberField(typeof(VclProbe), fieldName)
+                    {
+                        Attributes = MemberAttributes.Private,
+                        InitExpression =
+                            new CodeObjectCreateExpression(
+                                typeof(VclProbe),
+                                new CodePrimitiveExpression("default"))
+                    });
             }
 
             // Compile named backend entries
-            var backendCompiler = new VclCompileNamedBackendObjects(
-                probeCompiler.ProbeExpressions);
+            var backendCompiler = new VclCompileNamedBackendObjects(compilerContext);
             CompileAndVisit(vclTextFile, backendCompiler);
 
             // Compile named ACL entries
-            var aclCompiler = new VclCompileNamedAclObjects();
+            var aclCompiler = new VclCompileNamedAclObjects(compilerContext);
             CompileAndVisit(vclTextFile, aclCompiler);
 
             // TODO: Compile include references into list (if we bother to implement)
 
             // TODO: Compile named director entries (if we bother to implement)
 
-            // TODO: Compile subroutines into derived handler
+            // Compile subroutines entries
+            var subCompiler = new VclCompileNamedSubroutine(compilerContext);
+            CompileAndVisit(vclTextFile, subCompiler);
 
-            return new CompilerResult
-                   {
-                       ProbeExressions = probeCompiler.ProbeExpressions,
-                       BackendExpressions = backendCompiler.BackendExpressions,
-                       AclExpressions = aclCompiler.AclExpressions
-                   };
+            return compilerContext;
         }
 
         public TResult CompileAndVisit<TResult>(string vclTextFile, IVclVisitor<TResult> visitor)
@@ -110,6 +119,28 @@ namespace Im.Proxy.VclCore.Compiler
                 return visitor.Visit(parser.compileUnit());
             }
         }
+    }
+
+    public class VclCompilerContext
+    {
+        public CodeTypeDeclaration HandlerClass { get; set; }
+
+        public IDictionary<string, CodeFieldReferenceExpression> ProbeReferences { get; } =
+            new Dictionary<string, CodeFieldReferenceExpression>(StringComparer.OrdinalIgnoreCase);
+
+        public IDictionary<string, CodeFieldReferenceExpression> AclReferences { get; } =
+            new Dictionary<string, CodeFieldReferenceExpression>(StringComparer.OrdinalIgnoreCase);
+
+        public IDictionary<string, CodeFieldReferenceExpression> BackendReferences { get; } =
+            new Dictionary<string, CodeFieldReferenceExpression>(StringComparer.OrdinalIgnoreCase);
+
+        public IDictionary<string, CodeStatementCollection> MethodStatements { get; } =
+            new Dictionary<string, CodeStatementCollection>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "vcl_init", new CodeStatementCollection() }
+            };
+
+        public CodeStatementCollection InitStatements => MethodStatements["vcl_init"];
     }
 
     public class CompilerResult

@@ -1,54 +1,56 @@
 ﻿using System;
-using System.Collections.Concurrent;
+using System.CodeDom;
 using System.Collections.Generic;
-using System.Linq.Expressions;
 using System.Net;
 using System.Reflection;
-using System.Reflection.Emit;
 using System.Text.RegularExpressions;
 using Im.Proxy.VclCore.Model;
-using Expression = System.Linq.Expressions.Expression;
 
 // ReSharper disable AssignNullToNotNullAttribute
 
 namespace Im.Proxy.VclCore.Compiler
 {
+    public static class CodeObjectExtensions
+    {
+        private static readonly string TypeKey = "type";
+
+        public static Type GetExpressionType(this CodeObject instance)
+        {
+            return (Type)instance.UserData[TypeKey];
+        }
+
+        public static T SetExpressionType<T>(this T instance, Type type)
+            where T : CodeObject
+        {
+            instance.UserData[TypeKey] = type;
+            return instance;
+        }
+    }
     public class VclCompileNamedSubroutine : VclBaseExpressionVisitor
     {
         private class VclContextObjectMapper
         {
             private class VclObjectMemberMapper
             {
-                private readonly PropertyInfo _contextPropertyInfo;
-                private readonly IDictionary<string, Lazy<PropertyInfo>> _mapper =
-                    new Dictionary<string, Lazy<PropertyInfo>>(StringComparer.OrdinalIgnoreCase);
+                private readonly IDictionary<string, string> _mapper;
 
-                public VclObjectMemberMapper(
-                    PropertyInfo contextPropertyInfo,
-                    Type vclObjectType,
-                    params Tuple<string, string>[] grammarToLogicalEntries)
+                public VclObjectMemberMapper(IDictionary<string, string> grammarToLogicalEntries)
                 {
-                    _contextPropertyInfo = contextPropertyInfo;
-                    foreach (var item in grammarToLogicalEntries)
-                    {
-                        _mapper.Add(
-                            item.Item1,
-                            new Lazy<PropertyInfo>(() => vclObjectType.GetProperty(item.Item2)));
-                    }
+                    _mapper = new Dictionary<string, string>(
+                        grammarToLogicalEntries,
+                        StringComparer.OrdinalIgnoreCase);
                 }
 
-                public Expression MakeAccessExpression(Expression vclContextObjectExpression, string memberName)
+                public CodeExpression MakeAccessExpression(
+                    CodeExpression vclContextObjectExpression, string memberName)
                 {
                     if (!_mapper.ContainsKey(memberName))
                     {
                         throw new ArgumentException("context member not found.");
                     }
 
-                    return Expression.MakeMemberAccess(
-                        Expression.MakeMemberAccess(
-                            vclContextObjectExpression,
-                            _contextPropertyInfo),
-                        _mapper[memberName].Value);
+                    return new CodePropertyReferenceExpression(
+                        vclContextObjectExpression, _mapper[memberName]);
                 }
             }
 
@@ -60,107 +62,89 @@ namespace Im.Proxy.VclCore.Compiler
                 _contextVariableToMapper.Add(
                     "local",
                     new VclObjectMemberMapper(
-                        typeof(VclContext).GetProperty(nameof(VclContext.Local)),
-                        typeof(VclLocal),
-                        new[]
+                        new Dictionary<string, string>
                         {
-                            new Tuple<string, string>("ip", "Ip"),
-                            new Tuple<string, string>("endpoint", "Endpoint"),
-                            new Tuple<string, string>("socket", "Socket"),
+                            { "ip", "Ip" },
+                            { "endpoint", "Endpoint" },
+                            { "socket", "Socket" }
                         }));
                 _contextVariableToMapper.Add(
                     "remote",
                     new VclObjectMemberMapper(
-                        typeof(VclContext).GetProperty(nameof(VclContext.Remote)),
-                        typeof(VclRemote),
-                        new[]
+                        new Dictionary<string, string>
                         {
-                            new Tuple<string, string>("ip", "Ip"),
+                            { "ip", "Ip" },
                         }));
                 _contextVariableToMapper.Add(
                     "client",
                     new VclObjectMemberMapper(
-                        typeof(VclContext).GetProperty(nameof(VclContext.Client)),
-                        typeof(VclClient),
-                        new[]
+                        new Dictionary<string, string>
                         {
-                            new Tuple<string, string>("ip", "Ip"),
-                            new Tuple<string, string>("identity", "Identity"),
+                            { "ip", "Ip" },
+                            { "identity", "Identity" },
                         }));
                 _contextVariableToMapper.Add(
                     "server",
                     new VclObjectMemberMapper(
-                        typeof(VclContext).GetProperty(nameof(VclContext.Server)),
-                        typeof(VclServer),
-                        new[]
+                        new Dictionary<string, string>
                         {
-                            new Tuple<string, string>("ip", "Ip"),
-                            new Tuple<string, string>("hostnam", "HostName"),
-                            new Tuple<string, string>("identity", "Identity"),
-                            new Tuple<string, string>("port", "Port"),
+                            { "ip", "Ip" },
+                            { "hostnam", "HostName" },
+                            { "identity", "Identity" },
+                            { "port", "Port" }
                         }));
                 _contextVariableToMapper.Add(
                     "req",
                     new VclObjectMemberMapper(
-                        typeof(VclContext).GetProperty(nameof(VclContext.Request)),
-                        typeof(VclRequest),
-                        new[]
+                        new Dictionary<string, string>
                         {
-                            new Tuple<string, string>("method", "Method"),
-                            new Tuple<string, string>("url", "Url"),
-                            new Tuple<string, string>("proto", "ProtocolVersion"),
-                            new Tuple<string, string>("hash", "Hash"),
-                            new Tuple<string, string>("backend", "Backend"),
-                            new Tuple<string, string>("http", "Headers"),
-                            new Tuple<string, string>("restarts", "Restarts"),
-                            new Tuple<string, string>("esi_level", "EsiLevel"),
-                            new Tuple<string, string>("can_gzip", "CanGzip"),
-                            new Tuple<string, string>("hash_always_miss", "HashAlwaysMiss"),
-                            new Tuple<string, string>("hash_ignore_busy", "HashIgnoreBusy"),
+                            { "method", "Method" },
+                            { "url", "Url" },
+                            { "proto", "ProtocolVersion" },
+                            { "hash", "Hash" },
+                            { "backend", "Backend" },
+                            { "http", "Headers" },
+                            { "restarts", "Restarts" },
+                            { "esi_level", "EsiLevel" },
+                            { "can_gzip", "CanGzip" },
+                            { "hash_always_miss", "HashAlwaysMiss" },
+                            { "hash_ignore_busy", "HashIgnoreBusy" }
                         }));
                 _contextVariableToMapper.Add(
                     "bereq",
                     new VclObjectMemberMapper(
-                        typeof(VclContext).GetProperty(nameof(VclContext.BackendRequest)),
-                        typeof(VclBackendRequest),
-                        new[]
+                        new Dictionary<string, string>
                         {
-                            new Tuple<string, string>("", ""),
+                            { "", "" }
                         }));
                 _contextVariableToMapper.Add(
                     "beresp",
                     new VclObjectMemberMapper(
-                        typeof(VclContext).GetProperty(nameof(VclContext.BackendResponse)),
-                        typeof(VclBackendResponse),
-                        new[]
+                        new Dictionary<string, string>
                         {
-                            new Tuple<string, string>("", ""),
+                            { "", "" }
                         }));
                 _contextVariableToMapper.Add(
                     "obj",
                     new VclObjectMemberMapper(
-                        typeof(VclContext).GetProperty(nameof(VclContext.Object)),
-                        typeof(VclObject),
-                        new[]
+                        new Dictionary<string, string>
                         {
-                            new Tuple<string, string>("", ""),
+                            { "", "" }
                         }));
                 _contextVariableToMapper.Add(
                     "resp",
                     new VclObjectMemberMapper(
-                        typeof(VclContext).GetProperty(nameof(VclContext.Response)),
-                        typeof(VclResponse),
-                        new[]
+                        new Dictionary<string, string>
                         {
-                            new Tuple<string, string>("", ""),
+                            { "", "" }
                         }));
             }
 
             public bool TryGetExpression(
-                Expression vclContextExpression,
+                CodeExpression vclContextExpression,
                 string objectName,
                 string memberName,
-                out Expression expression)
+                out CodeExpression expression)
             {
                 if (!_contextVariableToMapper.TryGetValue(objectName, out var mapper))
                 {
@@ -172,8 +156,8 @@ namespace Im.Proxy.VclCore.Compiler
                 return true;
             }
 
-            public Expression GetExpression(
-                Expression vclContextExpression,
+            public CodeExpression GetExpression(
+                CodeExpression vclContextExpression,
                 string objectName,
                 string memberName)
             {
@@ -190,100 +174,113 @@ namespace Im.Proxy.VclCore.Compiler
             }
         }
 
-        private readonly TypeBuilder _derivedVclHandlerBuilder;
         private readonly VclContextObjectMapper _contextObjectMapper = new VclContextObjectMapper();
-        private ParameterExpression _vclContextExpression;
 
-        private Expression _currentMemberAccessExpression;
+        private readonly Stack<CodeConditionStatement> _currentCompoundStatementExpressions = new Stack<CodeConditionStatement>();
+        private readonly Stack<IDictionary<string, CodeVariableReferenceExpression>> _currentCompoundStatementVariables =
+            new Stack<IDictionary<string, CodeVariableReferenceExpression>>();
+
+        private int _unnamedVariableIndex;
         private int _memberAccessDepth;
+        private CodeExpression _currentMemberAccessExpression;
 
-        private LabelTarget _currentMethodReturnTarget;
-        private readonly Stack<List<Expression>> _currentCompoundStatementExpressions = new Stack<List<Expression>>();
-        private readonly Stack<IDictionary<string, Expression>> _currentCompoundStatementVariables =
-            new Stack<IDictionary<string, Expression>>();
-
-        public IDictionary<string, MethodBuilder> SubroutineMethodBuilders { get; } =
-            new Dictionary<string, MethodBuilder>(StringComparer.OrdinalIgnoreCase);
-
-        public IDictionary<string, Tuple<ParameterExpression, List<Expression>>> MethodBodyExpressions { get; } =
-            new Dictionary<string, Tuple<ParameterExpression, List<Expression>>>(StringComparer.OrdinalIgnoreCase);
-
-        public IDictionary<string, Expression> AclFields { get; }
-
-        public VclCompileNamedSubroutine(TypeBuilder derivedVclHandlerBuilder)
+        public VclCompileNamedSubroutine(VclCompilerContext compilerContext)
+            : base(compilerContext)
         {
-            _derivedVclHandlerBuilder = derivedVclHandlerBuilder;
         }
 
-        public override Expression VisitProcedureDeclaration(VclParser.ProcedureDeclarationContext context)
+        public override CodeObject VisitProcedureDeclaration(VclParser.ProcedureDeclarationContext context)
         {
             // Get or create method body expression
             var name = context.name.Text;
-            if (!MethodBodyExpressions.TryGetValue(name, out var entry))
+            if (!CompilerContext.MethodStatements.TryGetValue(name, out var entry))
             {
-               entry = new Tuple<ParameterExpression, List<Expression>>(
-                    Expression.Parameter(typeof(VclContext), "context"),
-                    new List<Expression>());
-                MethodBodyExpressions.Add(name, entry);
+                entry = new CodeStatementCollection();
+                CompilerContext.MethodStatements.Add(name, entry);
             }
 
-            _vclContextExpression = entry.Item1;
-            _currentMethodReturnTarget = Expression.Label(typeof(VclAction));
-            try
-            {
-                // Build method body
-                var bodyExpression = VisitCompoundStatement(context.compoundStatement());
-                entry.Item2.Add(bodyExpression);
-            }
-            finally
-            {
-                _currentMethodReturnTarget = null;
-                _vclContextExpression = null;
-            }
+            // Build method body
+            var bodyExpression = VisitCompoundStatement(context.compoundStatement());
+            entry.Add((CodeStatement)bodyExpression);
+
             return null;
         }
 
-        public override Expression VisitAclDeclaration(VclParser.AclDeclarationContext context)
+        public override CodeObject VisitAclDeclaration(VclParser.AclDeclarationContext context)
         {
             return null;
         }
 
-        public override Expression VisitBackendDeclaration(VclParser.BackendDeclarationContext context)
+        public override CodeObject VisitBackendDeclaration(VclParser.BackendDeclarationContext context)
         {
             return null;
         }
 
-        public override Expression VisitProbeDeclaration(VclParser.ProbeDeclarationContext context)
+        public override CodeObject VisitProbeDeclaration(VclParser.ProbeDeclarationContext context)
         {
             return null;
         }
 
-        public override Expression VisitReturnStatement(VclParser.ReturnStatementContext context)
+        public override CodeObject VisitCallStatement(VclParser.CallStatementContext context)
+        {
+            var subroutineName = context.subroutineName.Text;
+            if (subroutineName.StartsWith("vcl_", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException("Cannot make explicit calls to reserved methods.");
+            }
+
+            var localVariableName = GetUniqueLocalVariableName();
+            _currentCompoundStatementExpressions.Peek()
+                .TrueStatements.Add(new CodeVariableDeclarationStatement(
+                    typeof(VclAction), localVariableName));
+            var localVariableReference = new CodeVariableReferenceExpression(localVariableName);
+
+            _currentCompoundStatementExpressions.Peek()
+                .TrueStatements.AddRange(
+                    new CodeStatement[]
+                    {
+                        new CodeAssignStatement(
+                            localVariableReference,
+                            new CodeMethodInvokeExpression(
+                                new CodeMethodReferenceExpression(
+                                    new CodeThisReferenceExpression(),
+                                    subroutineName),
+                                new CodeVariableReferenceExpression("context"))),
+                        new CodeConditionStatement(
+                            new CodeBinaryOperatorExpression(
+                                localVariableReference,
+                                CodeBinaryOperatorType.IdentityInequality,
+                                new CodePrimitiveExpression(VclAction.NoOp)),
+                            new CodeMethodReturnStatement(localVariableReference))
+                    });
+
+            return base.VisitCallStatement(context);
+        }
+
+        public override CodeObject VisitReturnStatement(VclParser.ReturnStatementContext context)
         {
             // If we have no return state then we must be in a custom function
             if (context.returnStateExpression() == null)
             {
                 // What we actually return here is VclAction.NoOp
-                return Expression.Return(
-                    _currentMethodReturnTarget,
-                    Expression.Constant(VclAction.NoOp));
+                return new CodeMethodReturnStatement(
+                    new CodePrimitiveExpression(VclAction.NoOp));
             }
 
             // Otherwise call through base class
             return base.VisitReturnStatement(context);
         }
 
-        public override Expression VisitSimpleReturnStateExpression(VclParser.SimpleReturnStateExpressionContext context)
+        public override CodeObject VisitSimpleReturnStateExpression(VclParser.SimpleReturnStateExpressionContext context)
         {
             base.VisitSimpleReturnStateExpression(context);
 
             var action = context.GetText().Replace("-", string.Empty);
-            return Expression.Return(
-                _currentMethodReturnTarget,
-                Expression.Constant(Enum.Parse(typeof(VclAction), action, true)));
+            return new CodeMethodReturnStatement(
+                new CodePrimitiveExpression(Enum.Parse(typeof(VclAction), action, true)));
         }
 
-        public override Expression VisitComplexReturnStateExpression(VclParser.ComplexReturnStateExpressionContext context)
+        public override CodeObject VisitComplexReturnStateExpression(VclParser.ComplexReturnStateExpressionContext context)
         {
             base.VisitComplexReturnStateExpression(context);
 
@@ -291,15 +288,20 @@ namespace Im.Proxy.VclCore.Compiler
             return null;
         }
 
-        public override Expression VisitCompoundStatement(VclParser.CompoundStatementContext context)
+        public override CodeObject VisitCompoundStatement(VclParser.CompoundStatementContext context)
         {
-            _currentCompoundStatementVariables.Push(new Dictionary<string, Expression>(StringComparer.OrdinalIgnoreCase));
-            _currentCompoundStatementExpressions.Push(new List<Expression>());
+            _currentCompoundStatementVariables.Push(
+                new Dictionary<string, CodeVariableReferenceExpression>(StringComparer.OrdinalIgnoreCase));
+            _currentCompoundStatementExpressions.Push(
+                new CodeConditionStatement
+                {
+                    Condition = new CodePrimitiveExpression(true)
+                });
             try
             {
                 // Build compound statement and return block expression
                 base.VisitCompoundStatement(context);
-                return Expression.Block(_currentCompoundStatementExpressions.Peek());
+                return _currentCompoundStatementExpressions.Peek();
             }
             finally
             {
@@ -308,17 +310,17 @@ namespace Im.Proxy.VclCore.Compiler
             }
         }
 
-        public override Expression VisitStatement(VclParser.StatementContext context)
+        public override CodeObject VisitStatement(VclParser.StatementContext context)
         {
             var expression = base.VisitStatement(context);
             if (expression != null)
             {
-                _currentCompoundStatementExpressions.Peek().Add(expression);
+                _currentCompoundStatementExpressions.Peek().TrueStatements.Add((CodeStatement)expression);
             }
             return expression;
         }
 
-        public override Expression VisitVarStatement(VclParser.VarStatementContext context)
+        public override CodeObject VisitVarStatement(VclParser.VarStatementContext context)
         {
             var name = context.name.Text;
 
@@ -337,93 +339,112 @@ namespace Im.Proxy.VclCore.Compiler
             // Parse type
             var typeName = context.type.Text;
             Type type;
-            ConstantExpression initialValueExpression;
+            CodePrimitiveExpression initialValueExpression;
             switch (typeName)
             {
                 case "BOOL":
                     type = typeof(bool);
-                    initialValueExpression = Expression.Constant(false);
+                    initialValueExpression = new CodePrimitiveExpression(false);
                     break;
                 case "INTEGER":
                     type = typeof(int);
-                    initialValueExpression = Expression.Constant(0);
+                    initialValueExpression = new CodePrimitiveExpression(0);
                     break;
                 case "FLOAT":
                     type = typeof(double);
-                    initialValueExpression = Expression.Constant(0.0);
+                    initialValueExpression = new CodePrimitiveExpression(0.0);
                     break;
                 case "TIME":
                     type = typeof(DateTime);
-                    initialValueExpression = Expression.Constant(DateTime.Now);
+                    initialValueExpression = new CodePrimitiveExpression(DateTime.Now);
                     break;
                 case "RTIME":
                     type = typeof(TimeSpan);
-                    initialValueExpression = Expression.Constant(TimeSpan.Zero);
+                    initialValueExpression = new CodePrimitiveExpression(TimeSpan.Zero);
                     break;
                 case "STRING":
                     type = typeof(string);
-                    initialValueExpression = Expression.Constant(null, typeof(string));
+                    initialValueExpression = new CodePrimitiveExpression((string)null);
                     break;
                 default:
                     throw new InvalidOperationException("Unexpected variable type encountered");
             }
 
             // Create variable expression and save in current scope
-            var definitionExpression = Expression.Variable(type, name);
-            _currentCompoundStatementVariables.Peek()[name] = definitionExpression;
-            _currentCompoundStatementExpressions.Peek().Add(definitionExpression);
+            var definitionExpression =
+                new CodeVariableDeclarationStatement(type, name)
+                {
+                    InitExpression = initialValueExpression
+                };
+            _currentCompoundStatementExpressions.Peek().TrueStatements.Add(definitionExpression);
 
-            // Return the assignment expression
-            var assignmentExpression = Expression.Assign(
-                definitionExpression, initialValueExpression);
-            return assignmentExpression;
+            var referenceExpression = new CodeVariableReferenceExpression(name);
+            _currentCompoundStatementVariables.Peek()[name] = referenceExpression;
+
+            return referenceExpression;
         }
 
-        public override Expression VisitIfStatement(VclParser.IfStatementContext context)
+        public override CodeObject VisitIfStatement(VclParser.IfStatementContext context)
         {
             base.VisitIfStatement(context);
             if (context.otherTest.IsEmpty && context.elseStmt.IsEmpty)
             {
-                return Expression.IfThen(
-                    VisitExpression(context.test),
-                    VisitStatement(context.ifTrue));
+                return new CodeConditionStatement(
+                    (CodeExpression)VisitExpression(context.test),
+                    (CodeStatement)VisitStatement(context.ifTrue));
             }
 
             if (context.otherTest.IsEmpty)
             {
-                return Expression.IfThenElse(
-                    VisitExpression(context.test),
-                    VisitStatement(context.ifTrue),
-                    VisitStatement(context.elseStmt));
+                return new CodeConditionStatement(
+                    (CodeExpression)VisitExpression(context.test),
+                    (CodeStatement)VisitStatement(context.ifTrue),
+                    (CodeStatement)VisitStatement(context.elseStmt));
             }
 
-            return Expression.IfThenElse(
-                VisitExpression(context.test),
-                VisitStatement(context.ifTrue),
-                Expression.IfThenElse(
-                    VisitExpression(context.otherTest),
-                    VisitStatement(context.otherTrue),
-                    VisitStatement(context.elseStmt)));
+            return new CodeConditionStatement(
+                (CodeExpression)VisitExpression(context.test),
+                new[]
+                {
+                    (CodeStatement) VisitStatement(context.ifTrue),
+                },
+                new[]
+                {
+                    (CodeStatement) new CodeConditionStatement(
+                        (CodeExpression) VisitExpression(context.otherTest),
+                        new[]
+                        {
+                            (CodeStatement) VisitStatement(context.otherTrue)
+                        },
+                        new[]
+                        {
+                            (CodeStatement) VisitStatement(context.elseStmt)
+                        })
+                });
         }
 
-        public override Expression VisitSetStatement(VclParser.SetStatementContext context)
+        public override CodeObject VisitSetStatement(VclParser.SetStatementContext context)
         {
             base.VisitSetStatement(context);
             var lhs = VisitMemberAccessExpression(context.lhs);
             var rhs = VisitExpression(context.rhs);
-            return Expression.Assign(lhs, rhs);
+            return new CodeAssignStatement(
+                (CodeExpression)lhs,
+                (CodeExpression)rhs);
         }
 
-        public override Expression VisitRemoveStatement(VclParser.RemoveStatementContext context)
+        public override CodeObject VisitRemoveStatement(VclParser.RemoveStatementContext context)
         {
             base.VisitRemoveStatement(context);
             var lhs = VisitMemberAccessExpression(context.id);
             // TODO: Ensure we match type with LHS
-            var rhs = Expression.Constant(null, typeof(string));
-            return Expression.Assign(lhs, rhs);
+            var rhs = new CodePrimitiveExpression((string)null);
+            return new CodeAssignStatement(
+                (CodeExpression)lhs,
+                (CodeExpression)rhs);
         }
 
-        public override Expression VisitErrorStatement(VclParser.ErrorStatementContext context)
+        public override CodeObject VisitErrorStatement(VclParser.ErrorStatementContext context)
         {
             // Parse status code (from int or HttpStatusCode enum value)
             var statusCodeText = context.statusCode.Text;
@@ -440,25 +461,27 @@ namespace Im.Proxy.VclCore.Compiler
             var statusDescription = context.statusDescription?.Text ?? string.Empty;
 
             // Error implies instant response
-            return Expression.Block(
-                Expression.Assign(
-                    _contextObjectMapper.GetExpression(
-                        _vclContextExpression,
-                        "resp",
-                        "statusCode"),
-                    Expression.Constant(statusCode)),
-                Expression.Assign(
-                    _contextObjectMapper.GetExpression(
-                        _vclContextExpression,
-                        "resp",
-                        "description"),
-                    Expression.Constant(statusDescription)),
-                Expression.Return(
-                    _currentMethodReturnTarget,
-                    Expression.Constant(VclAction.DeliverContent)));
+            _currentCompoundStatementExpressions.Peek().TrueStatements.AddRange(
+                new CodeStatement[]
+                {
+                    new CodeAssignStatement(
+                        _contextObjectMapper.GetExpression(
+                            new CodeArgumentReferenceExpression("context"),
+                            "resp",
+                            "statusCode"),
+                        new CodePrimitiveExpression(statusCode)),
+                    new CodeAssignStatement(
+                        _contextObjectMapper.GetExpression(
+                            new CodeArgumentReferenceExpression("context"),
+                            "resp",
+                            "description"),
+                        new CodePrimitiveExpression(statusDescription)),
+                });
+            return new CodeMethodReturnStatement(
+                new CodePrimitiveExpression(VclAction.DeliverContent));
         }
 
-        public override Expression VisitExpressionStatement(VclParser.ExpressionStatementContext context)
+        public override CodeObject VisitExpressionStatement(VclParser.ExpressionStatementContext context)
         {
             base.VisitExpressionStatement(context);
 
@@ -470,153 +493,181 @@ namespace Im.Proxy.VclCore.Compiler
             return null;
         }
 
-        public override Expression VisitAssignmentExpression(VclParser.AssignmentExpressionContext context)
+        public override CodeObject VisitAssignmentExpression(VclParser.AssignmentExpressionContext context)
         {
             base.VisitAssignmentExpression(context);
 
-            var lhs = VisitUnaryExpression(context.lhs);
-            var rhs = VisitExpression(context.rhs);
+            var lhs = (CodeExpression)VisitUnaryExpression(context.lhs);
+            var rhs = (CodeExpression)VisitExpression(context.rhs);
 
-            if (lhs.Type != rhs.Type)
+            if (lhs.GetExpressionType() != rhs.GetExpressionType())
             {
-                rhs = ConvertExpression(rhs, lhs.Type);
+                rhs = ConvertExpression(rhs, lhs.GetExpressionType());
             }
 
             switch (context.op.GetText())
             {
                 case "=":
-                    return Expression.Assign(lhs, rhs);
+                    return new CodeAssignStatement(lhs, rhs);
 
                 case "+=":
-                    return Expression.AddAssign(lhs, rhs);
+                    return new CodeAssignStatement(lhs, new CodeBinaryOperatorExpression(lhs, CodeBinaryOperatorType.Add, rhs));
 
                 case "-=":
-                    return Expression.SubtractAssign(lhs, rhs);
+                    return new CodeAssignStatement(lhs, new CodeBinaryOperatorExpression(lhs, CodeBinaryOperatorType.Subtract, rhs));
 
                 default:
                     throw new InvalidOperationException("Unexpected assignment operator encountered");
             }
         }
 
-        public override Expression VisitConditionalExpression(VclParser.ConditionalExpressionContext context)
+        public override CodeObject VisitConditionalExpression(VclParser.ConditionalExpressionContext context)
         {
             base.VisitConditionalExpression(context);
 
-            var result = VisitConditionalOrExpression(context.conditionalOrExpression());
-            if (context.ifTrue != null && context.ifFalse != null)
-            {
-                result = Expression.Condition(
-                    result,
-                    VisitExpression(context.ifTrue),
-                    VisitExpression(context.ifFalse));
-            }
+            throw new NotSupportedException();
 
-            return result;
+            // TODO: Need to generate three methods (condition, true and false methods) then inject a snippet expression that makes the call
+
+            //var result = VisitConditionalOrExpression(context.conditionalOrExpression());
+            //if (context.ifTrue != null && context.ifFalse != null)
+            //{
+            //    return new CodeExpression() (
+            //            (CodeExpression)VisitExclusiveOrExpression(context.lhs),
+            //            CodeBinaryOperatorType.BitwiseOr,
+            //            (CodeExpression)VisitExclusiveOrExpression(context.rhs))
+            //        .SetExpressionType(typeof(int));
+            //    result = Expression.Condition(
+            //        result,
+            //        VisitExpression(context.ifTrue),
+            //        VisitExpression(context.ifFalse));
+            //}
+
+            //return result;
         }
 
-        public override Expression VisitConditionalOrExpression(VclParser.ConditionalOrExpressionContext context)
+        public override CodeObject VisitConditionalOrExpression(VclParser.ConditionalOrExpressionContext context)
         {
             base.VisitConditionalOrExpression(context);
 
-            return Expression.OrElse(
-                VisitConditionalAndExpression(context.lhs),
-                VisitConditionalAndExpression(context.rhs));
+            return new CodeBinaryOperatorExpression(
+                    (CodeExpression)VisitConditionalAndExpression(context.lhs),
+                    CodeBinaryOperatorType.BooleanOr,
+                    (CodeExpression)VisitConditionalAndExpression(context.rhs))
+                .SetExpressionType(typeof(bool));
         }
 
-        public override Expression VisitConditionalAndExpression(VclParser.ConditionalAndExpressionContext context)
+        public override CodeObject VisitConditionalAndExpression(VclParser.ConditionalAndExpressionContext context)
         {
             base.VisitConditionalAndExpression(context);
 
-            return Expression.AndAlso(
-                VisitInclusiveOrExpression(context.lhs),
-                VisitInclusiveOrExpression(context.rhs));
+            return new CodeBinaryOperatorExpression(
+                    (CodeExpression)VisitInclusiveOrExpression(context.lhs),
+                    CodeBinaryOperatorType.BooleanAnd,
+                    (CodeExpression)VisitInclusiveOrExpression(context.rhs))
+                .SetExpressionType(typeof(bool));
         }
 
-        public override Expression VisitInclusiveOrExpression(VclParser.InclusiveOrExpressionContext context)
+        public override CodeObject VisitInclusiveOrExpression(VclParser.InclusiveOrExpressionContext context)
         {
             base.VisitInclusiveOrExpression(context);
 
-            return Expression.Or(
-                VisitExclusiveOrExpression(context.lhs),
-                VisitExclusiveOrExpression(context.rhs));
+            return new CodeBinaryOperatorExpression(
+                    (CodeExpression)VisitExclusiveOrExpression(context.lhs),
+                    CodeBinaryOperatorType.BitwiseOr,
+                    (CodeExpression)VisitExclusiveOrExpression(context.rhs))
+                .SetExpressionType(typeof(int));
         }
 
-        public override Expression VisitExclusiveOrExpression(VclParser.ExclusiveOrExpressionContext context)
+        public override CodeObject VisitExclusiveOrExpression(VclParser.ExclusiveOrExpressionContext context)
         {
             base.VisitExclusiveOrExpression(context);
 
-            return Expression.ExclusiveOr(
-                VisitAndExpression(context.lhs),
-                VisitAndExpression(context.rhs));
+            // TODO: Need to find fix for missing XOR operator
+            // TODO: Create function for LHS and RHS then inject code snippet expression for XOR
+            throw new NotSupportedException();
+            //return new CodeBinaryOperatorExpression(
+            //        (CodeExpression)VisitAndExpression(context.lhs),
+            //        CodeBinaryOperatorType.ExclusiveOr,
+            //        (CodeExpression)VisitAndExpression(context.rhs))
+            //    .SetExpressionType(typeof(int));
         }
 
-        public override Expression VisitAndExpression(VclParser.AndExpressionContext context)
+        public override CodeObject VisitAndExpression(VclParser.AndExpressionContext context)
         {
             base.VisitAndExpression(context);
 
-            return Expression.And(
-                VisitEqualityExpression(context.lhs),
-                VisitEqualityExpression(context.rhs));
+            return new CodeBinaryOperatorExpression(
+                    (CodeExpression)VisitEqualityExpression(context.lhs),
+                    CodeBinaryOperatorType.BitwiseAnd,
+                    (CodeExpression)VisitEqualityExpression(context.rhs))
+                .SetExpressionType(typeof(int));
         }
 
-        public override Expression VisitEqualStandardExpression(VclParser.EqualStandardExpressionContext context)
+        public override CodeObject VisitEqualStandardExpression(VclParser.EqualStandardExpressionContext context)
         {
             base.VisitEqualStandardExpression(context);
 
             switch (context.op.Text)
             {
                 case "==":
-                    return Expression.Equal(
-                        VisitRelationalExpression(context.lhs),
-                        VisitRelationalExpression(context.rhs));
+                    return new CodeBinaryOperatorExpression(
+                            (CodeExpression)VisitRelationalExpression(context.lhs),
+                            CodeBinaryOperatorType.IdentityEquality,
+                            (CodeExpression)VisitRelationalExpression(context.rhs))
+                        .SetExpressionType(typeof(bool));
 
                 case "!=":
-                    return Expression.NotEqual(
-                        VisitRelationalExpression(context.lhs),
-                        VisitRelationalExpression(context.rhs));
+                    return new CodeBinaryOperatorExpression(
+                            (CodeExpression)VisitRelationalExpression(context.lhs),
+                            CodeBinaryOperatorType.IdentityInequality,
+                            (CodeExpression)VisitRelationalExpression(context.rhs))
+                        .SetExpressionType(typeof(bool));
 
                 default:
                     throw new ArgumentException("Unknown equality operator encountered");
             }
         }
 
-        public override Expression VisitMatchRegexExpression(VclParser.MatchRegexExpressionContext context)
+        public override CodeObject VisitMatchRegexExpression(VclParser.MatchRegexExpressionContext context)
         {
             base.VisitMatchRegexExpression(context);
 
             // Get regular expression from RHS context
-            var regexExpression = VisitRegularExpression(context.rhs);
+            var regexExpression = (CodeExpression)VisitRegularExpression(context.rhs);
 
-            var lhs = VisitRelationalExpression(context.lhs);
+            var lhs = (CodeExpression)VisitRelationalExpression(context.lhs);
 
             // LHS expression needs to be string
-            if (lhs.Type != typeof(string))
+            if (lhs.GetExpressionType() != typeof(string))
             {
-                lhs = Expression.Call(
-                    lhs,
-                    typeof(object).GetMethod(
-                        nameof(ToString),
-                        BindingFlags.Static | BindingFlags.Public));
+                lhs = new CodeMethodInvokeExpression(
+                        lhs, nameof(ToString))
+                    .SetExpressionType(typeof(string));
             }
 
             // Build call to VclAcl.IsMatch method
-            Expression result = Expression.Call(
-                regexExpression,
-                typeof(Regex).GetMethod(
+            var result = ((CodeExpression)
+                new CodeMethodInvokeExpression(
+                    regexExpression,
                     nameof(Regex.IsMatch),
-                    new[] { typeof(string) }),
-                lhs);
+                    lhs))
+                .SetExpressionType(typeof(bool));
 
             // Handle negation of the result as necessary
             if (context.op.Text == "!~")
             {
-                result = Expression.Negate(result);
+                result = new CodeBinaryOperatorExpression(
+                        result,
+                        CodeBinaryOperatorType.IdentityEquality,
+                        new CodePrimitiveExpression(false))
+                    .SetExpressionType(typeof(bool));
             }
 
             return result;
         }
 
-        public override Expression VisitRegularExpression(VclParser.RegularExpressionContext context)
+        public override CodeObject VisitRegularExpression(VclParser.RegularExpressionContext context)
         {
             base.VisitRegularExpression(context);
 
@@ -625,143 +676,168 @@ namespace Im.Proxy.VclCore.Compiler
             // TODO: Convert from PRCE regex to .NET regex
 
             // For now you'll need to do this by hand
-            return Expression.New(
-                typeof(Regex).GetConstructor(
-                    new[] { typeof(string), typeof(RegexOptions) }),
-                Expression.Constant(expr),
-                Expression.Constant(
+            return new System.CodeDom.CodeObjectCreateExpression(
+                typeof(Regex),
+                new CodePrimitiveExpression(expr),
+                new CodePrimitiveExpression(
                     RegexOptions.Singleline |
                     RegexOptions.Compiled |
-                    RegexOptions.IgnoreCase));
+                    RegexOptions.IgnoreCase))
+                .SetExpressionType(typeof(Regex));
         }
 
-        public override Expression VisitMatchAclExpression(VclParser.MatchAclExpressionContext context)
+        public override CodeObject VisitMatchAclExpression(VclParser.MatchAclExpressionContext context)
         {
             base.VisitMatchAclExpression(context);
 
-            var lhs = VisitRelationalExpression(context.lhs);
+            var lhs = (CodeExpression)VisitRelationalExpression(context.lhs);
 
             // Add code to convert LHS string into IPAddress
-            if (lhs.Type == typeof(string))
+            if (lhs.GetExpressionType() == typeof(string))
             {
-                lhs = Expression.Call(
-                    null,
-                    typeof(IPAddress).GetMethod(
-                        nameof(IPAddress.Parse),
-                        BindingFlags.Static |
-                        BindingFlags.Public),
-                    lhs);
+                lhs = new CodeMethodInvokeExpression(
+                    new CodeTypeReferenceExpression(typeof(IPAddress)),
+                    nameof(IPAddress.Parse),
+                    lhs)
+                    .SetExpressionType(typeof(IPAddress));
             }
 
             // Throw if LHS type is not an IPAddress
-            if (lhs.Type != typeof(IPAddress))
+            if (lhs.GetExpressionType() != typeof(IPAddress))
             {
                 throw new ArgumentException("Left expression must resolve to string or IPAddress");
             }
 
             // Build call to VclAcl.IsMatch method
-            Expression result = Expression.Call(
-                AclFields[context.rhs.GetText()],
-                typeof(VclAcl).GetMethod(
+            var result = ((CodeExpression)
+                new CodeMethodInvokeExpression(
+                    CompilerContext.AclReferences[context.rhs.GetText()],
                     nameof(VclAcl.IsMatch),
-                    new[] { typeof(IPAddress) }),
-                lhs);
+                    lhs))
+                .SetExpressionType(typeof(bool));
 
             // Handle negation of the result as necessary
             if (context.op.Text == "!~")
             {
-                result = Expression.Negate(result);
+                result = new CodeBinaryOperatorExpression(
+                        result,
+                        CodeBinaryOperatorType.IdentityEquality,
+                        new CodePrimitiveExpression(false))
+                    .SetExpressionType(typeof(bool));
             }
 
             return result;
         }
 
-        public override Expression VisitRelationalExpression(VclParser.RelationalExpressionContext context)
+        public override CodeObject VisitRelationalExpression(VclParser.RelationalExpressionContext context)
         {
             base.VisitRelationalExpression(context);
 
             switch (context.op.Text)
             {
                 case "<":
-                    return Expression.LessThan(
-                        VisitAdditiveExpression(context.lhs),
-                        VisitAdditiveExpression(context.rhs));
+                    return new CodeBinaryOperatorExpression(
+                            (CodeExpression)VisitAdditiveExpression(context.lhs),
+                            CodeBinaryOperatorType.LessThan,
+                            (CodeExpression)VisitAdditiveExpression(context.rhs))
+                        .SetExpressionType(typeof(bool));
 
                 case ">":
-                    return Expression.GreaterThan(
-                        VisitAdditiveExpression(context.lhs),
-                        VisitAdditiveExpression(context.rhs));
+                    return new CodeBinaryOperatorExpression(
+                            (CodeExpression)VisitAdditiveExpression(context.lhs),
+                            CodeBinaryOperatorType.GreaterThan,
+                            (CodeExpression)VisitAdditiveExpression(context.rhs))
+                        .SetExpressionType(typeof(bool));
 
                 case "<=":
-                    return Expression.LessThanOrEqual(
-                        VisitAdditiveExpression(context.lhs),
-                        VisitAdditiveExpression(context.rhs));
+                    return new CodeBinaryOperatorExpression(
+                            (CodeExpression)VisitAdditiveExpression(context.lhs),
+                            CodeBinaryOperatorType.LessThanOrEqual,
+                            (CodeExpression)VisitAdditiveExpression(context.rhs))
+                        .SetExpressionType(typeof(bool));
 
                 case ">=":
-                    return Expression.GreaterThanOrEqual(
-                        VisitAdditiveExpression(context.lhs),
-                        VisitAdditiveExpression(context.rhs));
+                    return new CodeBinaryOperatorExpression(
+                            (CodeExpression)VisitAdditiveExpression(context.lhs),
+                            CodeBinaryOperatorType.GreaterThanOrEqual,
+                            (CodeExpression)VisitAdditiveExpression(context.rhs))
+                        .SetExpressionType(typeof(bool));
 
                 default:
                     throw new ArgumentException("Unknown relational operator encountered");
             }
         }
 
-        public override Expression VisitAdditiveExpression(VclParser.AdditiveExpressionContext context)
+        public override CodeObject VisitAdditiveExpression(VclParser.AdditiveExpressionContext context)
         {
             base.VisitAdditiveExpression(context);
 
             switch (context.op.Text)
             {
                 case "+":
-                    return Expression.Add(
-                        VisitMultiplicativeExpression(context.lhs),
-                        VisitMultiplicativeExpression(context.rhs));
+                    return new CodeBinaryOperatorExpression(
+                            (CodeExpression)VisitMultiplicativeExpression(context.lhs),
+                            CodeBinaryOperatorType.Multiply,
+                            (CodeExpression)VisitMultiplicativeExpression(context.rhs))
+                        .SetExpressionType(typeof(int)); // TODO: Need to resolve this correctly
 
                 case "-":
-                    return Expression.Subtract(
-                        VisitMultiplicativeExpression(context.lhs),
-                        VisitMultiplicativeExpression(context.rhs));
+                    return new CodeBinaryOperatorExpression(
+                            (CodeExpression)VisitMultiplicativeExpression(context.lhs),
+                            CodeBinaryOperatorType.Multiply,
+                            (CodeExpression)VisitMultiplicativeExpression(context.rhs))
+                        .SetExpressionType(typeof(int)); // TODO: Need to resolve this correctly
 
                 default:
                     throw new ArgumentException("Unknown relational operator encountered");
             }
         }
 
-        public override Expression VisitMultiplicativeExpression(VclParser.MultiplicativeExpressionContext context)
+        public override CodeObject VisitMultiplicativeExpression(VclParser.MultiplicativeExpressionContext context)
         {
             base.VisitMultiplicativeExpression(context);
+
+            // TODO: This is only valid for numeric types (int and double)
 
             switch (context.op.Text)
             {
                 case "*":
-                    return Expression.Multiply(
-                        VisitUnaryExpression(context.lhs),
-                        VisitUnaryExpression(context.rhs));
+                    return new CodeBinaryOperatorExpression(
+                            (CodeExpression)VisitUnaryExpression(context.lhs),
+                            CodeBinaryOperatorType.Multiply,
+                            (CodeExpression)VisitUnaryExpression(context.rhs))
+                        .SetExpressionType(typeof(int)); // TODO: Need to resolve this correctly
 
                 case "/":
-                    return Expression.Divide(
-                        VisitUnaryExpression(context.lhs),
-                        VisitUnaryExpression(context.rhs));
+                    return new CodeBinaryOperatorExpression(
+                            (CodeExpression)VisitUnaryExpression(context.lhs),
+                            CodeBinaryOperatorType.Divide,
+                            (CodeExpression)VisitUnaryExpression(context.rhs))
+                        .SetExpressionType(typeof(int)); // TODO: Need to resolve this correctly
 
                 case "%":
-                    return Expression.Modulo(
-                        VisitUnaryExpression(context.lhs),
-                        VisitUnaryExpression(context.rhs));
+                    return new CodeBinaryOperatorExpression(
+                            (CodeExpression)VisitUnaryExpression(context.lhs),
+                            CodeBinaryOperatorType.Modulus,
+                            (CodeExpression)VisitUnaryExpression(context.rhs))
+                        .SetExpressionType(typeof(int)); // TODO: Need to resolve this correctly
 
                 default:
                     throw new ArgumentException("Unknown relational operator encountered");
             }
         }
 
-        public override Expression VisitUnaryNegateExpression(VclParser.UnaryNegateExpressionContext context)
+        public override CodeObject VisitUnaryNegateExpression(VclParser.UnaryNegateExpressionContext context)
         {
             base.VisitUnaryNegateExpression(context);
 
-            return Expression.Negate(VisitUnaryExpression(context.unaryExpression()));
+            return new CodeBinaryOperatorExpression(
+                (CodeExpression)VisitUnaryExpression(context.unaryExpression()),
+                CodeBinaryOperatorType.IdentityEquality,
+                new CodePrimitiveExpression(false)).SetExpressionType(typeof(bool));
         }
 
-        public override Expression VisitMemberAccessExpression(VclParser.MemberAccessExpressionContext context)
+        public override CodeObject VisitMemberAccessExpression(VclParser.MemberAccessExpressionContext context)
         {
             if (_memberAccessDepth == 0)
             {
@@ -771,12 +847,10 @@ namespace Im.Proxy.VclCore.Compiler
                 // Lookup based on date
                 if (identifier == "now" && memberName == null)
                 {
-                    return Expression.Call(
-                        null,
-                        typeof(VclGlobalFunctions).GetMethod(
-                            nameof(VclGlobalFunctions.Now),
-                            BindingFlags.Static |
-                            BindingFlags.Public));
+                    return new CodeMethodInvokeExpression(
+                        new CodeTypeReferenceExpression(typeof(VclGlobalFunctions)),
+                        nameof(VclGlobalFunctions.Now))
+                        .SetExpressionType(typeof(DateTime));
                 }
 
                 // If identifier is "var" then walk local scope variables
@@ -796,7 +870,7 @@ namespace Im.Proxy.VclCore.Compiler
 
                 // Finally attempt to perform lookup for context variables
                 if (!_contextObjectMapper.TryGetExpression(
-                    _vclContextExpression,
+                    new CodeArgumentReferenceExpression("context"),
                     identifier,
                     memberName,
                     out var expression))
@@ -804,6 +878,7 @@ namespace Im.Proxy.VclCore.Compiler
                     throw new ArgumentException("Unable to determine top-level object");
                 }
 
+                _currentMemberAccessExpression = expression;
                 return expression;
             }
 
@@ -811,18 +886,27 @@ namespace Im.Proxy.VclCore.Compiler
 
             // Combine the current access expression with the right-hand-side
             // Special case for dictionary on LHS
-            if (_currentMemberAccessExpression.Type == typeof(IDictionary<string, string>))
+            if (_currentMemberAccessExpression.GetExpressionType() == typeof(IDictionary<string, string>))
             {
-                _currentMemberAccessExpression = Expression.MakeIndex(
-                    _currentMemberAccessExpression,
-                    typeof(IDictionary<string, string>).GetProperty("Item"),
-                    new[] { Expression.Constant(rhsIdentifier) });
+                _currentMemberAccessExpression =
+                    new CodeIndexerExpression(
+                        _currentMemberAccessExpression,
+                        new CodePrimitiveExpression(rhsIdentifier))
+                        .SetExpressionType(typeof(string));
             }
             else
             {
-                _currentMemberAccessExpression = Expression.MakeMemberAccess(
-                    _currentMemberAccessExpression,
-                    _currentMemberAccessExpression.Type.GetProperty(rhsIdentifier));
+                var type = _currentMemberAccessExpression
+                    .GetExpressionType()
+                    .GetProperty(
+                        rhsIdentifier,
+                        BindingFlags.Public |
+                        BindingFlags.IgnoreCase)
+                    .PropertyType;
+                _currentMemberAccessExpression =
+                    new CodePropertyReferenceExpression(
+                        _currentMemberAccessExpression, rhsIdentifier)
+                        .SetExpressionType(type);
             }
 
             ++_memberAccessDepth;
@@ -838,37 +922,45 @@ namespace Im.Proxy.VclCore.Compiler
             return _currentMemberAccessExpression;
         }
 
-        private Expression ConvertExpression(Expression expr, Type targetType)
+        private CodeExpression ConvertExpression(CodeExpression expr, Type targetType)
         {
             // Converting to string is easy...
             if (targetType == typeof(string))
             {
-                return Expression.Call(
-                    expr,
-                    typeof(object).GetMethod("ToString"));
+                return new CodeMethodInvokeExpression(expr, "ToString").SetExpressionType(typeof(string));
             }
 
             if (targetType == typeof(bool))
             {
-                if (expr.Type == typeof(int))
+                if (expr.GetExpressionType() == typeof(int))
                 {
                     // Zero is falsey
-                    return Expression.NotEqual(expr, Expression.Constant(0));
+                    return new CodeBinaryOperatorExpression(
+                            expr,
+                            CodeBinaryOperatorType.IdentityInequality,
+                            new CodePrimitiveExpression(0))
+                        .SetExpressionType(typeof(bool));
                 }
 
-                if (expr.Type == typeof(string))
+                if (expr.GetExpressionType() == typeof(string))
                 {
                     // Empty strings are falsey
-                    return Expression.Negate(
-                        Expression.Call(
-                            typeof(string).GetMethod(
-                                nameof(string.IsNullOrWhiteSpace),
-                                new[] { typeof(string) }),
-                            expr));
+                    return new CodeBinaryOperatorExpression(
+                        new CodeMethodInvokeExpression(
+                            new CodeTypeReferenceExpression(typeof(string)),
+                            nameof(string.IsNullOrWhiteSpace),
+                            expr),
+                        CodeBinaryOperatorType.IdentityEquality,
+                        new CodePrimitiveExpression(false));
                 }
             }
 
             throw new NotSupportedException("Invalid cast exception");
+        }
+
+        private string GetUniqueLocalVariableName()
+        {
+            return $"anonObject{++_unnamedVariableIndex}";
         }
     }
 }

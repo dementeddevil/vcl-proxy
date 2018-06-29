@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq.Expressions;
-using System.Reflection;
+using System.CodeDom;
 using Im.Proxy.VclCore.Model;
 
 namespace Im.Proxy.VclCore.Compiler
@@ -16,95 +14,87 @@ namespace Im.Proxy.VclCore.Compiler
     /// <seealso cref="VclBaseExpressionVisitor" />
     public class VclCompileNamedProbeObjects : VclBaseExpressionVisitor
     {
-        protected IList<MemberBinding> CurrentProbeBindings { get; } = new List<MemberBinding>();
-
-        public IDictionary<string, Expression> ProbeExpressions { get; } =
-            new Dictionary<string, Expression>(StringComparer.OrdinalIgnoreCase);
-
-        public VclCompileNamedProbeObjects()
+        public VclCompileNamedProbeObjects(VclCompilerContext compilerContext)
+            : base(compilerContext)
         {
         }
 
-        protected VclCompileNamedProbeObjects(IDictionary<string, Expression> probeExpressions)
-        {
-            ProbeExpressions = probeExpressions;
-        }
+        protected CodeExpression CurrentProbeExpression { get; set; }
 
-        public override Expression VisitProbeDeclaration(VclParser.ProbeDeclarationContext context)
+        public override CodeObject VisitProbeDeclaration(VclParser.ProbeDeclarationContext context)
         {
             var name = context.Identifier().GetText();
-            if (ProbeExpressions.ContainsKey(name))
+            if (CompilerContext.ProbeReferences.ContainsKey(name))
             {
                 throw new ArgumentException("Probe name is not unique");
             }
 
-            CurrentProbeBindings.Clear();
+            // Determine field name
+            var fieldName = name.SafeIdentifier("_probe");
+
+            // Setup current probe object and add to probe mapper
+            CurrentProbeExpression = new CodeFieldReferenceExpression(
+                new CodeThisReferenceExpression(), fieldName);
+            CompilerContext.ProbeReferences.Add(name, (CodeFieldReferenceExpression)CurrentProbeExpression);
+
+            // Create field and add to handler class
+            CompilerContext.HandlerClass.Members.Add(
+                new CodeMemberField(typeof(VclProbe), fieldName)
+                {
+                    Attributes = MemberAttributes.Private,
+                    InitExpression =
+                        new CodeObjectCreateExpression(
+                            typeof(VclProbe),
+                            new CodePrimitiveExpression(name))
+                });
+
             base.VisitProbeDeclaration(context);
 
-            var probeTypeCtor = typeof(VclProbe).GetConstructor(new[] { typeof(string) });
-            ProbeExpressions.Add(
-                name,
-                Expression.MemberInit(
-                    Expression.New(probeTypeCtor, Expression.Constant(name)),
-                    CurrentProbeBindings));
-
+            CurrentProbeExpression = null;
             return null;
         }
 
-        public override Expression VisitProbeStringVariableExpression(VclParser.ProbeStringVariableExpressionContext context)
+        public override CodeObject VisitProbeStringVariableExpression(VclParser.ProbeStringVariableExpressionContext context)
         {
             base.VisitProbeStringVariableExpression(context);
 
             var normalisedMemberName = context.name.GetText().Replace("_", "");
-
-            var propInfo = typeof(VclProbe).GetProperty(
-                normalisedMemberName,
-                BindingFlags.Instance |
-                BindingFlags.Public |
-                BindingFlags.IgnoreCase |
-                BindingFlags.SetProperty);
-            CurrentProbeBindings.Add(
-                Expression.Bind(
-                    propInfo,
-                    VisitStringLiteral(context.stringLiteral())));
+            CompilerContext.InitStatements.Add(
+                new CodeAssignStatement(
+                    new CodePropertyReferenceExpression(
+                        CurrentProbeExpression,
+                        normalisedMemberName),
+                    (CodeExpression)VisitStringLiteral(context.stringLiteral())));
 
             return null;
         }
 
-        public override Expression VisitProbeIntegerVariableExpression(VclParser.ProbeIntegerVariableExpressionContext context)
+        public override CodeObject VisitProbeIntegerVariableExpression(VclParser.ProbeIntegerVariableExpressionContext context)
         {
             base.VisitProbeIntegerVariableExpression(context);
 
             var normalisedMemberName = context.name.GetText().Replace("_", "");
-            var propInfo = typeof(VclProbe).GetProperty(
-                normalisedMemberName,
-                BindingFlags.Instance |
-                BindingFlags.Public |
-                BindingFlags.IgnoreCase |
-                BindingFlags.SetProperty);
-            CurrentProbeBindings.Add(
-                Expression.Bind(
-                    propInfo,
-                    VisitIntegerLiteral(context.integerLiteral())));
+            CompilerContext.InitStatements.Add(
+                new CodeAssignStatement(
+                    new CodePropertyReferenceExpression(
+                        CurrentProbeExpression,
+                        normalisedMemberName),
+                    (CodeExpression)VisitIntegerLiteral(context.integerLiteral())));
 
             return null;
         }
 
-        public override Expression VisitProbeTimeVariableExpression(VclParser.ProbeTimeVariableExpressionContext context)
+        public override CodeObject VisitProbeTimeVariableExpression(VclParser.ProbeTimeVariableExpressionContext context)
         {
             base.VisitProbeTimeVariableExpression(context);
 
             var normalisedMemberName = context.name.GetText().Replace("_", "");
-            var propInfo = typeof(VclProbe).GetProperty(
-                normalisedMemberName,
-                BindingFlags.Instance |
-                BindingFlags.Public |
-                BindingFlags.IgnoreCase |
-                BindingFlags.SetProperty);
-            CurrentProbeBindings.Add(
-                Expression.Bind(
-                    propInfo,
-                    VisitTimeLiteral(context.timeLiteral())));
+            CompilerContext.InitStatements.Add(
+                new CodeAssignStatement(
+                    new CodePropertyReferenceExpression(
+                        CurrentProbeExpression,
+                        normalisedMemberName),
+                    (CodeExpression)VisitTimeLiteral(context.timeLiteral())));
 
             return null;
         }

@@ -1,30 +1,37 @@
 ﻿using System;
-using System.Linq.Expressions;
+using System.CodeDom;
 using Antlr4.Runtime.Misc;
 
 namespace Im.Proxy.VclCore.Compiler
 {
-    public class VclBaseExpressionVisitor : VclBaseVisitor<Expression>
+    public class VclBaseExpressionVisitor : VclBaseVisitor<CodeObject>
     {
-        public override Expression VisitStringLiteral(VclParser.StringLiteralContext context)
+        protected VclBaseExpressionVisitor(VclCompilerContext compilerContext)
+        {
+            CompilerContext = compilerContext;
+        }
+
+        protected VclCompilerContext CompilerContext { get; }
+
+        public override CodeObject VisitStringLiteral(VclParser.StringLiteralContext context)
         {
             base.VisitStringLiteral(context);
-            return Expression.Constant(context.StringConstant().GetText().Trim('"'));
+            return new CodePrimitiveExpression(context.StringConstant().GetText().Trim('"'));
         }
 
-        public override Expression VisitSynthenticLiteral([NotNull] VclParser.SynthenticLiteralContext context)
+        public override CodeObject VisitSynthenticLiteral([NotNull] VclParser.SynthenticLiteralContext context)
         {
             base.VisitSynthenticLiteral(context);
-            return Expression.Constant(context.SyntheticString().GetText().Trim('"', '{', '}'));
+            return new CodePrimitiveExpression(context.SyntheticString().GetText().Trim('"', '{', '}'));
         }
 
-        public override Expression VisitIntegerLiteral(VclParser.IntegerLiteralContext context)
+        public override CodeObject VisitIntegerLiteral(VclParser.IntegerLiteralContext context)
         {
             base.VisitIntegerLiteral(context);
-            return Expression.Constant(int.Parse(context.IntegerConstant().GetText()));
+            return new CodePrimitiveExpression(int.Parse(context.IntegerConstant().GetText()));
         }
 
-        public override Expression VisitTimeLiteral(VclParser.TimeLiteralContext context)
+        public override CodeObject VisitTimeLiteral(VclParser.TimeLiteralContext context)
         {
             base.VisitTimeLiteral(context);
             var rawValue = context.TimeConstant().GetText();
@@ -59,13 +66,13 @@ namespace Im.Proxy.VclCore.Compiler
                 }
             }
 
-            return Expression.Constant(value);
+            return new CodePrimitiveExpression(value);
         }
 
-        public override Expression VisitBooleanLiteral(VclParser.BooleanLiteralContext context)
+        public override CodeObject VisitBooleanLiteral(VclParser.BooleanLiteralContext context)
         {
             base.VisitBooleanLiteral(context);
-            return Expression.Constant(Boolean.Parse(context.GetText()));
+            return new CodePrimitiveExpression(bool.Parse(context.GetText()));
         }
     }
 }

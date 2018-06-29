@@ -1,126 +1,150 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq.Expressions;
+using System.CodeDom;
 using Im.Proxy.VclCore.Model;
 
 namespace Im.Proxy.VclCore.Compiler
 {
     public class VclCompileNamedAclObjects : VclBaseExpressionVisitor
     {
-        private Expression _currentAclBuilder;
+        public VclCompileNamedAclObjects(VclCompilerContext compilerContext)
+            : base(compilerContext)
+        {
+        }
 
-        public IDictionary<string, Expression> AclExpressions =
-            new Dictionary<string, Expression>(StringComparer.OrdinalIgnoreCase);
+        private CodeExpression _currentAclBuilder;
 
-        public override Expression VisitAclDeclaration(VclParser.AclDeclarationContext context)
+        public override CodeObject VisitAclDeclaration(VclParser.AclDeclarationContext context)
         {
             _currentAclBuilder = null;
 
+            var name = context.name.Text;
+            if (CompilerContext.AclReferences.ContainsKey(name))
+            {
+                throw new ArgumentException("Acl name is not unique");
+            }
+
             base.VisitAclDeclaration(context);
 
-            var name = context.name.Text;
             if (_currentAclBuilder != null)
             {
-                _currentAclBuilder = Expression.Call(
-                    _currentAclBuilder,
-                    typeof(VclAclBuilder).GetMethod(
-                        nameof(VclAclBuilder.SetName),
-                        new[] { typeof(string) }),
-                    Expression.Constant(name));
+                // Determine field name
+                var fieldName = name.SafeIdentifier("_acl");
 
-                AclExpressions.Add(name, Expression.Call(
-                    _currentAclBuilder,
-                    typeof(VclAclBuilder).GetMethod(
-                        nameof(VclAclBuilder.Build),
-                        new Type[0])));
+                // Setup current probe object and add to probe mapper
+                CompilerContext.AclReferences.Add(
+                    name,
+                    new CodeFieldReferenceExpression(
+                        new CodeThisReferenceExpression(), fieldName));
+
+                _currentAclBuilder =
+                    new CodeMethodInvokeExpression(
+                        new CodeMethodReferenceExpression(
+                            _currentAclBuilder,
+                            nameof(VclAclBuilder.SetName),
+                            new CodeTypeReference(typeof(string))),
+                        new CodePrimitiveExpression(name));
+
+                CompilerContext.HandlerClass.Members.Add(
+                    new CodeMemberField(typeof(VclProbe), fieldName)
+                    {
+                        Attributes = MemberAttributes.Private,
+                        InitExpression =
+                            new CodeMethodInvokeExpression(
+                                new CodeMethodReferenceExpression(
+                                    _currentAclBuilder,
+                                    nameof(VclAclBuilder.Build)))
+                    });
             }
 
             return null;
         }
 
-        public override Expression VisitAclElement(VclParser.AclElementContext context)
+        public override CodeObject VisitAclElement(VclParser.AclElementContext context)
         {
             var expression = base.VisitAclElement(context);
 
             if (_currentAclBuilder == null)
             {
-                _currentAclBuilder = Expression.New(
-                    typeof(VclAclBuilder).GetConstructor(new Type[0]));
+                _currentAclBuilder = new CodeObjectCreateExpression(typeof(VclAclBuilder));
             }
 
             if (context.exclude != null)
             {
-                _currentAclBuilder = Expression.Call(
-                    _currentAclBuilder,
-                    typeof(VclAclBuilder).GetMethod(
-                        nameof(VclAclBuilder.Exclude),
-                        new[] {typeof(VclAclEntry)}),
-                    expression);
+                _currentAclBuilder = 
+                    new CodeMethodInvokeExpression(
+                        new CodeMethodReferenceExpression(
+                            _currentAclBuilder,
+                            nameof(VclAclBuilder.Exclude),
+                            new CodeTypeReference(typeof(VclAclEntry))),
+                        (CodeExpression)expression);
             }
             else
             {
-                _currentAclBuilder = Expression.Call(
-                    _currentAclBuilder,
-                    typeof(VclAclBuilder).GetMethod(
-                        nameof(VclAclBuilder.Include),
-                        new[] { typeof(VclAclEntry) }),
-                    expression);
+                _currentAclBuilder =
+                    new CodeMethodInvokeExpression(
+                        new CodeMethodReferenceExpression(
+                            _currentAclBuilder,
+                            nameof(VclAclBuilder.Include),
+                            new CodeTypeReference(typeof(VclAclEntry))),
+                        (CodeExpression)expression);
             }
 
             return null;
         }
 
-        public override Expression VisitAclEntryNonIgnorableHost(VclParser.AclEntryNonIgnorableHostContext context)
+        public override CodeObject VisitAclEntryNonIgnorableHost(VclParser.AclEntryNonIgnorableHostContext context)
         {
             base.VisitAclEntryNonIgnorableHost(context);
 
-            var mi = typeof(VclAclEntry).GetMethod(
-                nameof(VclAclEntry.FromHostName),
-                new[] { typeof(string), typeof(bool) });
-            return Expression.Call(
-                mi,
-                Expression.Constant(context.host.Text),
-                Expression.Constant(false));
+            return new CodeMethodInvokeExpression(
+                new CodeMethodReferenceExpression(
+                    new CodeTypeReferenceExpression(typeof(VclAclEntry)),
+                    nameof(VclAclEntry.FromHostName),
+                    new CodeTypeReference(typeof(string)),
+                    new CodeTypeReference(typeof(bool))),
+                new CodePrimitiveExpression(context.host.Text),
+                new CodePrimitiveExpression(false));
         }
 
-        public override Expression VisitAclEntryIgnorableHost(VclParser.AclEntryIgnorableHostContext context)
+        public override CodeObject VisitAclEntryIgnorableHost(VclParser.AclEntryIgnorableHostContext context)
         {
             base.VisitAclEntryIgnorableHost(context);
 
-            var mi = typeof(VclAclEntry).GetMethod(
-                nameof(VclAclEntry.FromHostName),
-                new[] { typeof(string), typeof(bool) });
-            return Expression.Call(
-                mi,
-                Expression.Constant(context.host.Text),
-                Expression.Constant(true));
+            return new CodeMethodInvokeExpression(
+                new CodeMethodReferenceExpression(
+                    new CodeTypeReferenceExpression(typeof(VclAclEntry)),
+                    nameof(VclAclEntry.FromHostName),
+                    new CodeTypeReference(typeof(string)),
+                    new CodeTypeReference(typeof(bool))),
+                new CodePrimitiveExpression(context.host.Text),
+                new CodePrimitiveExpression(true));
         }
 
-        public override Expression VisitAclEntryIpAddress(VclParser.AclEntryIpAddressContext context)
+        public override CodeObject VisitAclEntryIpAddress(VclParser.AclEntryIpAddressContext context)
         {
             base.VisitAclEntryIpAddress(context);
 
-            var mi = typeof(VclAclEntry).GetMethod(
-                nameof(VclAclEntry.FromAddress),
-                new[] { typeof(string) });
-            return Expression.Call(
-                mi,
-                Expression.Constant(context.address.Text));
+            return new CodeMethodInvokeExpression(
+                new CodeMethodReferenceExpression(
+                    new CodeTypeReferenceExpression(typeof(VclAclEntry)),
+                    nameof(VclAclEntry.FromAddress),
+                    new CodeTypeReference(typeof(string))),
+                new CodePrimitiveExpression(context.address.Text));
         }
 
-        public override Expression VisitAclEntrySubnetMask(VclParser.AclEntrySubnetMaskContext context)
+        public override CodeObject VisitAclEntrySubnetMask(VclParser.AclEntrySubnetMaskContext context)
         {
             base.VisitAclEntrySubnetMask(context);
 
-            var mi = typeof(VclAclEntry).GetMethod(
-                nameof(VclAclEntry.FromSubnet),
-                new[] { typeof(string) });
-            return Expression.Call(
-                mi,
-                Expression.Constant(context.subnet.Text));
+            return new CodeMethodInvokeExpression(
+                new CodeMethodReferenceExpression(
+                    new CodeTypeReferenceExpression(typeof(VclAclEntry)),
+                    nameof(VclAclEntry.FromSubnet),
+                    new CodeTypeReference(typeof(string))),
+                new CodePrimitiveExpression(context.subnet.Text));
         }
 
-        protected override Expression AggregateResult(Expression aggregate, Expression nextResult)
+        protected override CodeObject AggregateResult(CodeObject aggregate, CodeObject nextResult)
         {
             return nextResult ?? aggregate;
         }
