@@ -55,13 +55,34 @@ namespace Im.Proxy.VclCore.Compiler
             public VclContextObjectMapper()
             {
                 _contextVariableToMapper.Add(
+                    "local",
+                    new VclObjectMemberMapper(
+                        typeof(VclContext).GetProperty(nameof(VclContext.Client)),
+                        typeof(VclClient),
+                        new[]
+                        {
+                            new Tuple<string, string>("ip", "Ip"),
+                            new Tuple<string, string>("endpoint", "Endpoint"),
+                            new Tuple<string, string>("socket", "Socket"),
+                        }));
+                _contextVariableToMapper.Add(
+                    "remote",
+                    new VclObjectMemberMapper(
+                        typeof(VclContext).GetProperty(nameof(VclContext.Client)),
+                        typeof(VclClient),
+                        new[]
+                        {
+                            new Tuple<string, string>("ip", "Ip"),
+                        }));
+                _contextVariableToMapper.Add(
                     "client",
                     new VclObjectMemberMapper(
                         typeof(VclContext).GetProperty(nameof(VclContext.Client)),
                         typeof(VclClient),
                         new[]
                         {
-                            new Tuple<string, string>("", ""), 
+                            new Tuple<string, string>("ip", "Ip"),
+                            new Tuple<string, string>("identity", "Identity"),
                         }));
                 _contextVariableToMapper.Add(
                     "server",
@@ -70,7 +91,10 @@ namespace Im.Proxy.VclCore.Compiler
                         typeof(VclServer),
                         new[]
                         {
-                            new Tuple<string, string>("", ""),
+                            new Tuple<string, string>("ip", "Ip"),
+                            new Tuple<string, string>("hostnam", "HostName"),
+                            new Tuple<string, string>("identity", "Identity"),
+                            new Tuple<string, string>("port", "Port"),
                         }));
                 _contextVariableToMapper.Add(
                     "req",
@@ -79,7 +103,17 @@ namespace Im.Proxy.VclCore.Compiler
                         typeof(VclRequest),
                         new[]
                         {
-                            new Tuple<string, string>("", ""),
+                            new Tuple<string, string>("method", "Method"),
+                            new Tuple<string, string>("url", "Url"),
+                            new Tuple<string, string>("proto", "ProtocolVersion"),
+                            new Tuple<string, string>("hash", "Hash"),
+                            new Tuple<string, string>("backend", "Backend"),
+                            new Tuple<string, string>("http", "Headers"),
+                            new Tuple<string, string>("restarts", "Restarts"),
+                            new Tuple<string, string>("esi", "EsiLevel"),
+                            new Tuple<string, string>("can_gzip", "CanGzip"),
+                            new Tuple<string, string>("hash_always_miss", "HashAlwaysMiss"),
+                            new Tuple<string, string>("hash_ignore_busy", "HashIgnoreBusy"),
                         }));
                 _contextVariableToMapper.Add(
                     "resp",

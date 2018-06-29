@@ -1,9 +1,7 @@
 ﻿namespace Im.Proxy.VclCore.Model
 {
-    public class VclClient
+    public class VclRemote
     {
         public string Ip { get; set; }
-
-        public string Identity { get; set; }
     }
 }

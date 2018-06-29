@@ -178,7 +178,7 @@ expressionStatement
 	;
 
 ifStatement
-	:	'if' '(' test=expression ')' ifTrue=statement (('elif' | 'else if') '(' otherTest=expression ')' otherTrue=statement)* ('else' elseStmt=statement)?
+	:	'if' '(' test=expression ')' ifTrue=statement (('elseif' | 'elsif' | 'elif') '(' otherTest=expression ')' otherTrue=statement)* ('else' elseStmt=statement)?
 	;
 
 setStatement
@@ -293,7 +293,7 @@ andExpression
 	;
 
 equalityExpression
-	:	lhs=relationalExpression (op=('==' | '!=') rhs=relationalExpression)*	# EqualStandardExpression
+	:	lhs=relationalExpression (op=('==' | '!=') rhs=relationalExpression)*		# EqualStandardExpression
 	|	lhs=relationalExpression (op=('~' | '!~') rhs=regularExpression)*			# MatchRegexExpression
 	|	lhs=relationalExpression (op=('~' | '!~') rhs=aclReferenceExpression)*		# MatchAclExpression
 	;

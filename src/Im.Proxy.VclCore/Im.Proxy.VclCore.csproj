@@ -109,11 +109,15 @@
     <Compile Include="Compiler\VclHandlerCompiler.cs" />
     <Compile Include="Compiler\VclHandlerCompilerContext.cs" />
     <Compile Include="Model\VclAcl.cs" />
+    <Compile Include="Model\VclAclBuilder.cs" />
+    <Compile Include="Model\VclAclEntry.cs" />
     <Compile Include="Model\VclBackend.cs" />
     <Compile Include="Model\VclBackendRequest.cs" />
     <Compile Include="Model\VclBackendResponse.cs" />
     <Compile Include="Model\VclClient.cs" />
     <Compile Include="Model\VclContext.cs" />
+    <Compile Include="Model\VclLocal.cs" />
+    <Compile Include="Model\VclRemote.cs" />
     <Compile Include="Model\VclRequest.cs" />
     <Compile Include="Compiler\VclCompiler.cs" />
     <Compile Include="Model\VclResponse.cs" />
