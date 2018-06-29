@@ -117,6 +117,7 @@
     <Compile Include="Model\VclClient.cs" />
     <Compile Include="Model\VclContext.cs" />
     <Compile Include="Model\VclLocal.cs" />
+    <Compile Include="Model\VclObject.cs" />
     <Compile Include="Model\VclRemote.cs" />
     <Compile Include="Model\VclRequest.cs" />
     <Compile Include="Compiler\VclCompiler.cs" />

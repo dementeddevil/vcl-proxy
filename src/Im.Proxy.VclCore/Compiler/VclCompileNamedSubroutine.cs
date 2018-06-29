@@ -57,8 +57,8 @@ namespace Im.Proxy.VclCore.Compiler
                 _contextVariableToMapper.Add(
                     "local",
                     new VclObjectMemberMapper(
-                        typeof(VclContext).GetProperty(nameof(VclContext.Client)),
-                        typeof(VclClient),
+                        typeof(VclContext).GetProperty(nameof(VclContext.Local)),
+                        typeof(VclLocal),
                         new[]
                         {
                             new Tuple<string, string>("ip", "Ip"),
@@ -68,8 +68,8 @@ namespace Im.Proxy.VclCore.Compiler
                 _contextVariableToMapper.Add(
                     "remote",
                     new VclObjectMemberMapper(
-                        typeof(VclContext).GetProperty(nameof(VclContext.Client)),
-                        typeof(VclClient),
+                        typeof(VclContext).GetProperty(nameof(VclContext.Remote)),
+                        typeof(VclRemote),
                         new[]
                         {
                             new Tuple<string, string>("ip", "Ip"),
@@ -110,19 +110,10 @@ namespace Im.Proxy.VclCore.Compiler
                             new Tuple<string, string>("backend", "Backend"),
                             new Tuple<string, string>("http", "Headers"),
                             new Tuple<string, string>("restarts", "Restarts"),
-                            new Tuple<string, string>("esi", "EsiLevel"),
+                            new Tuple<string, string>("esi_level", "EsiLevel"),
                             new Tuple<string, string>("can_gzip", "CanGzip"),
                             new Tuple<string, string>("hash_always_miss", "HashAlwaysMiss"),
                             new Tuple<string, string>("hash_ignore_busy", "HashIgnoreBusy"),
-                        }));
-                _contextVariableToMapper.Add(
-                    "resp",
-                    new VclObjectMemberMapper(
-                        typeof(VclContext).GetProperty(nameof(VclContext.Response)),
-                        typeof(VclResponse),
-                        new[]
-                        {
-                            new Tuple<string, string>("", ""),
                         }));
                 _contextVariableToMapper.Add(
                     "bereq",
@@ -138,6 +129,24 @@ namespace Im.Proxy.VclCore.Compiler
                     new VclObjectMemberMapper(
                         typeof(VclContext).GetProperty(nameof(VclContext.BackendResponse)),
                         typeof(VclBackendResponse),
+                        new[]
+                        {
+                            new Tuple<string, string>("", ""),
+                        }));
+                _contextVariableToMapper.Add(
+                    "obj",
+                    new VclObjectMemberMapper(
+                        typeof(VclContext).GetProperty(nameof(VclContext.Object)),
+                        typeof(VclObject),
+                        new[]
+                        {
+                            new Tuple<string, string>("", ""),
+                        }));
+                _contextVariableToMapper.Add(
+                    "resp",
+                    new VclObjectMemberMapper(
+                        typeof(VclContext).GetProperty(nameof(VclContext.Response)),
+                        typeof(VclResponse),
                         new[]
                         {
                             new Tuple<string, string>("", ""),
