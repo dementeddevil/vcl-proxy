@@ -16,17 +16,21 @@ namespace Im.Proxy.VclCore.Compiler
         {
             private class VclObjectMemberMapper
             {
+                private readonly string _logicalName;
                 private readonly IDictionary<string, (string, Type)> _mapper;
 
-                public VclObjectMemberMapper(IDictionary<string, (string, Type)> grammarToLogicalEntries)
+                public VclObjectMemberMapper(
+                    string logicalName,
+                    IDictionary<string, (string, Type)> grammarToLogicalEntries)
                 {
+                    _logicalName = logicalName;
                     _mapper = new Dictionary<string, (string, Type)>(
                         grammarToLogicalEntries,
                         StringComparer.OrdinalIgnoreCase);
                 }
 
                 public CodeExpression MakeAccessExpression(
-                    CodeExpression vclContextObjectExpression, string memberName)
+                    CodeExpression vclContextExpression, string memberName)
                 {
                     if (!_mapper.ContainsKey(memberName))
                     {
@@ -34,7 +38,9 @@ namespace Im.Proxy.VclCore.Compiler
                     }
 
                     return new CodePropertyReferenceExpression(
-                            vclContextObjectExpression, _mapper[memberName].Item1)
+                            new CodePropertyReferenceExpression(
+                                vclContextExpression, _logicalName), 
+                            _mapper[memberName].Item1)
                         .SetExpressionType(_mapper[memberName].Item2);
                 }
             }
@@ -47,6 +53,7 @@ namespace Im.Proxy.VclCore.Compiler
                 _contextVariableToMapper.Add(
                     "local",
                     new VclObjectMemberMapper(
+                        nameof(VclContext.Local),
                         new Dictionary<string, (string, Type)>
                         {
                             { "ip", ("Ip", typeof(string)) },
@@ -56,6 +63,7 @@ namespace Im.Proxy.VclCore.Compiler
                 _contextVariableToMapper.Add(
                     "remote",
                     new VclObjectMemberMapper(
+                        nameof(VclContext.Remote),
                         new Dictionary<string, (string, Type)>
                         {
                             { "ip", ("Ip", typeof(string)) }
@@ -63,6 +71,7 @@ namespace Im.Proxy.VclCore.Compiler
                 _contextVariableToMapper.Add(
                     "client",
                     new VclObjectMemberMapper(
+                        nameof(VclContext.Client),
                         new Dictionary<string, (string, Type)>
                         {
                             { "ip", ("Ip", typeof(string)) },
@@ -71,6 +80,7 @@ namespace Im.Proxy.VclCore.Compiler
                 _contextVariableToMapper.Add(
                     "server",
                     new VclObjectMemberMapper(
+                        nameof(VclContext.Server),
                         new Dictionary<string, (string, Type)>
                         {
                             { "ip", ("Ip", typeof(string)) },
@@ -81,23 +91,38 @@ namespace Im.Proxy.VclCore.Compiler
                 _contextVariableToMapper.Add(
                     "req",
                     new VclObjectMemberMapper(
+                        nameof(VclContext.Request),
                         new Dictionary<string, (string, Type)>
                         {
                             { "method", ("Method", typeof(string)) },
                             { "url", ("Url", typeof(string)) },
+                            { "http", ("Headers", typeof(IDictionary<string, string>)) },
                             { "proto", ("ProtocolVersion", typeof(string)) },
                             { "hash", ("Hash", typeof(string)) },
-                            { "backend", ("Backend", typeof(VclBackend)) },
-                            { "http", ("Headers", typeof(IDictionary<string, string>)) },
+                            { "backend_hint", ("Backend", typeof(VclBackend)) },
                             { "restarts", ("Restarts", typeof(int)) },
                             { "esi_level", ("EsiLevel", typeof(int)) },
+                            { "ttl", ("Ttl", typeof(TimeSpan)) },
+                            { "xid", ("RequestId", typeof(string)) },
                             { "can_gzip", ("CanGzip", typeof(bool)) },
                             { "hash_always_miss", ("HashAlwaysMiss", typeof(bool)) },
                             { "hash_ignore_busy", ("HashIgnoreBusy", typeof(bool)) }
                         }));
                 _contextVariableToMapper.Add(
+                    "req_top",
+                    new VclObjectMemberMapper(
+                        nameof(VclContext.TopRequest),
+                        new Dictionary<string, (string, Type)>
+                        {
+                            { "method", ("Method", typeof(string)) },
+                            { "url", ("Url", typeof(string)) },
+                            { "http", ("Headers", typeof(IDictionary<string, string>)) },
+                            { "proto", ("ProtocolVersion", typeof(string)) }
+                        }));
+                _contextVariableToMapper.Add(
                     "bereq",
                     new VclObjectMemberMapper(
+                        nameof(VclContext.BackendRequest),
                         new Dictionary<string, (string, Type)>
                         {
                             { "", ("", typeof(string)) }
@@ -105,6 +130,7 @@ namespace Im.Proxy.VclCore.Compiler
                 _contextVariableToMapper.Add(
                     "beresp",
                     new VclObjectMemberMapper(
+                        nameof(VclContext.BackendResponse),
                         new Dictionary<string, (string, Type)>
                         {
                             { "", ("", typeof(string)) }
@@ -112,6 +138,7 @@ namespace Im.Proxy.VclCore.Compiler
                 _contextVariableToMapper.Add(
                     "obj",
                     new VclObjectMemberMapper(
+                        nameof(VclContext.Object),
                         new Dictionary<string, (string, Type)>
                         {
                             { "", ("", typeof(string)) }
@@ -119,6 +146,7 @@ namespace Im.Proxy.VclCore.Compiler
                 _contextVariableToMapper.Add(
                     "resp",
                     new VclObjectMemberMapper(
+                        nameof(VclContext.Response),
                         new Dictionary<string, (string, Type)>
                         {
                             { "", ("", typeof(string)) }

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Im.Proxy.VclCore.Model
 {
@@ -10,6 +11,8 @@ namespace Im.Proxy.VclCore.Model
     /// </remarks>
     public class VclRequest
     {
+        public string RequestId { get; } = Guid.NewGuid().ToString("N");
+
         /// <summary>
         /// Gets or sets the HTTP method of the request.
         /// </summary>
@@ -17,14 +20,6 @@ namespace Im.Proxy.VclCore.Model
         /// The request.
         /// </value>
         public string Method { get; set; }
-
-        /// <summary>
-        /// Gets or sets the hash.
-        /// </summary>
-        /// <value>
-        /// The hash.
-        /// </value>
-        public string Hash { get; set; }
 
         /// <summary>
         /// Gets or sets the URL of the request.
@@ -35,6 +30,14 @@ namespace Im.Proxy.VclCore.Model
         public string Url { get; set; }
 
         /// <summary>
+        /// Gets or sets the HTTP.
+        /// </summary>
+        /// <value>
+        /// The HTTP.
+        /// </value>
+        public IDictionary<string, string> Headers { get; set; }
+
+        /// <summary>
         /// Gets or sets the HTTP protocol version.
         /// </summary>
         /// <value>
@@ -43,20 +46,20 @@ namespace Im.Proxy.VclCore.Model
         public string ProtocolVersion { get; set; }
 
         /// <summary>
+        /// Gets or sets the hash.
+        /// </summary>
+        /// <value>
+        /// The hash.
+        /// </value>
+        public string Hash { get; set; }
+
+        /// <summary>
         /// Gets or sets the backend.
         /// </summary>
         /// <value>
         /// The backend.
         /// </value>
         public VclBackend Backend { get; set; }
-
-        /// <summary>
-        /// Gets or sets the HTTP.
-        /// </summary>
-        /// <value>
-        /// The HTTP.
-        /// </value>
-        public IDictionary<string, string> Headers { get; set; }
 
         /// <summary>
         /// Gets or sets the restarts.
@@ -73,6 +76,14 @@ namespace Im.Proxy.VclCore.Model
         /// The esi level.
         /// </value>
         public int EsiLevel { get; set; }
+
+        /// <summary>
+        /// Gets or sets the TTL.
+        /// </summary>
+        /// <value>
+        /// The TTL.
+        /// </value>
+        public TimeSpan Ttl { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether this instance can gzip.
