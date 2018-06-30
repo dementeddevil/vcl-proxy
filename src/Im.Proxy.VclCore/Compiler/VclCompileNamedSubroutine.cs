@@ -10,33 +10,17 @@ using Im.Proxy.VclCore.Model;
 
 namespace Im.Proxy.VclCore.Compiler
 {
-    public static class CodeObjectExtensions
-    {
-        private static readonly string TypeKey = "type";
-
-        public static Type GetExpressionType(this CodeObject instance)
-        {
-            return (Type)instance.UserData[TypeKey];
-        }
-
-        public static T SetExpressionType<T>(this T instance, Type type)
-            where T : CodeObject
-        {
-            instance.UserData[TypeKey] = type;
-            return instance;
-        }
-    }
     public class VclCompileNamedSubroutine : VclBaseExpressionVisitor
     {
         private class VclContextObjectMapper
         {
             private class VclObjectMemberMapper
             {
-                private readonly IDictionary<string, string> _mapper;
+                private readonly IDictionary<string, (string, Type)> _mapper;
 
-                public VclObjectMemberMapper(IDictionary<string, string> grammarToLogicalEntries)
+                public VclObjectMemberMapper(IDictionary<string, (string, Type)> grammarToLogicalEntries)
                 {
-                    _mapper = new Dictionary<string, string>(
+                    _mapper = new Dictionary<string, (string, Type)>(
                         grammarToLogicalEntries,
                         StringComparer.OrdinalIgnoreCase);
                 }
@@ -50,7 +34,8 @@ namespace Im.Proxy.VclCore.Compiler
                     }
 
                     return new CodePropertyReferenceExpression(
-                        vclContextObjectExpression, _mapper[memberName]);
+                            vclContextObjectExpression, _mapper[memberName].Item1)
+                        .SetExpressionType(_mapper[memberName].Item2);
                 }
             }
 
@@ -62,81 +47,81 @@ namespace Im.Proxy.VclCore.Compiler
                 _contextVariableToMapper.Add(
                     "local",
                     new VclObjectMemberMapper(
-                        new Dictionary<string, string>
+                        new Dictionary<string, (string, Type)>
                         {
-                            { "ip", "Ip" },
-                            { "endpoint", "Endpoint" },
-                            { "socket", "Socket" }
+                            { "ip", ("Ip", typeof(string)) },
+                            { "endpoint", ("Endpoint", typeof(string)) },
+                            { "socket", ("Socket", typeof(string)) }
                         }));
                 _contextVariableToMapper.Add(
                     "remote",
                     new VclObjectMemberMapper(
-                        new Dictionary<string, string>
+                        new Dictionary<string, (string, Type)>
                         {
-                            { "ip", "Ip" },
+                            { "ip", ("Ip", typeof(string)) }
                         }));
                 _contextVariableToMapper.Add(
                     "client",
                     new VclObjectMemberMapper(
-                        new Dictionary<string, string>
+                        new Dictionary<string, (string, Type)>
                         {
-                            { "ip", "Ip" },
-                            { "identity", "Identity" },
+                            { "ip", ("Ip", typeof(string)) },
+                            { "identity", ("Identity", typeof(string)) }
                         }));
                 _contextVariableToMapper.Add(
                     "server",
                     new VclObjectMemberMapper(
-                        new Dictionary<string, string>
+                        new Dictionary<string, (string, Type)>
                         {
-                            { "ip", "Ip" },
-                            { "hostnam", "HostName" },
-                            { "identity", "Identity" },
-                            { "port", "Port" }
+                            { "ip", ("Ip", typeof(string)) },
+                            { "hostnam", ("HostName", typeof(string)) },
+                            { "identity", ("Identity", typeof(string)) },
+                            { "port", ("Port", typeof(int)) }
                         }));
                 _contextVariableToMapper.Add(
                     "req",
                     new VclObjectMemberMapper(
-                        new Dictionary<string, string>
+                        new Dictionary<string, (string, Type)>
                         {
-                            { "method", "Method" },
-                            { "url", "Url" },
-                            { "proto", "ProtocolVersion" },
-                            { "hash", "Hash" },
-                            { "backend", "Backend" },
-                            { "http", "Headers" },
-                            { "restarts", "Restarts" },
-                            { "esi_level", "EsiLevel" },
-                            { "can_gzip", "CanGzip" },
-                            { "hash_always_miss", "HashAlwaysMiss" },
-                            { "hash_ignore_busy", "HashIgnoreBusy" }
+                            { "method", ("Method", typeof(string)) },
+                            { "url", ("Url", typeof(string)) },
+                            { "proto", ("ProtocolVersion", typeof(string)) },
+                            { "hash", ("Hash", typeof(string)) },
+                            { "backend", ("Backend", typeof(VclBackend)) },
+                            { "http", ("Headers", typeof(IDictionary<string, string>)) },
+                            { "restarts", ("Restarts", typeof(int)) },
+                            { "esi_level", ("EsiLevel", typeof(int)) },
+                            { "can_gzip", ("CanGzip", typeof(bool)) },
+                            { "hash_always_miss", ("HashAlwaysMiss", typeof(bool)) },
+                            { "hash_ignore_busy", ("HashIgnoreBusy", typeof(bool)) }
                         }));
                 _contextVariableToMapper.Add(
                     "bereq",
                     new VclObjectMemberMapper(
-                        new Dictionary<string, string>
+                        new Dictionary<string, (string, Type)>
                         {
-                            { "", "" }
+                            { "", ("", typeof(string)) }
                         }));
                 _contextVariableToMapper.Add(
                     "beresp",
                     new VclObjectMemberMapper(
-                        new Dictionary<string, string>
+                        new Dictionary<string, (string, Type)>
                         {
-                            { "", "" }
+                            { "", ("", typeof(string)) }
                         }));
                 _contextVariableToMapper.Add(
                     "obj",
                     new VclObjectMemberMapper(
-                        new Dictionary<string, string>
+                        new Dictionary<string, (string, Type)>
                         {
-                            { "", "" }
+                            { "", ("", typeof(string)) }
                         }));
                 _contextVariableToMapper.Add(
                     "resp",
                     new VclObjectMemberMapper(
-                        new Dictionary<string, string>
+                        new Dictionary<string, (string, Type)>
                         {
-                            { "", "" }
+                            { "", ("", typeof(string)) }
                         }));
             }
 
