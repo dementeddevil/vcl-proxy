@@ -1,8 +1,12 @@
-﻿namespace Im.Proxy.VclCore.Model
+﻿using System.Net;
+
+namespace Im.Proxy.VclCore.Model
 {
     public class VclClient
     {
-        public string Ip { get; set; }
+        public IPAddress Ip { get; set; }
+
+        public int Port { get; set; }
 
         public string Identity { get; set; }
     }
