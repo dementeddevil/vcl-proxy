@@ -134,6 +134,7 @@
     <Compile Include="Compiler\VclCompileNamedBackendObjects.cs" />
     <Compile Include="Compiler\VclCompileNamedProbeObjects.cs" />
     <Compile Include="Compiler\VclCompileNamedSubroutine.cs" />
+    <Compile Include="Compiler\VclCompilerContext.cs" />
     <Compile Include="Compiler\VclGlobalFunctions.cs" />
     <Compile Include="Compiler\VclHandlerCompiler.cs" />
     <Compile Include="Compiler\VclHandlerCompilerContext.cs" />

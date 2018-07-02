@@ -147,26 +147,4 @@ namespace Im.Proxy.VclCore.Compiler
             return visitor.Visit(parser.compileUnit());
         }
     }
-
-    public class VclCompilerContext
-    {
-        public CodeTypeDeclaration HandlerClass { get; set; }
-
-        public IDictionary<string, CodeFieldReferenceExpression> ProbeReferences { get; } =
-            new Dictionary<string, CodeFieldReferenceExpression>(StringComparer.OrdinalIgnoreCase);
-
-        public IDictionary<string, CodeFieldReferenceExpression> AclReferences { get; } =
-            new Dictionary<string, CodeFieldReferenceExpression>(StringComparer.OrdinalIgnoreCase);
-
-        public IDictionary<string, CodeFieldReferenceExpression> BackendReferences { get; } =
-            new Dictionary<string, CodeFieldReferenceExpression>(StringComparer.OrdinalIgnoreCase);
-
-        public IDictionary<string, CodeStatementCollection> MethodStatements { get; } =
-            new Dictionary<string, CodeStatementCollection>(StringComparer.OrdinalIgnoreCase)
-            {
-                { "vcl_init", new CodeStatementCollection() }
-            };
-
-        public CodeStatementCollection InitStatements => MethodStatements["vcl_init"];
-    }
 }
