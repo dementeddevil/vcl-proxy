@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 
 namespace Im.Proxy.VclCore.Model
 {
@@ -105,5 +106,14 @@ namespace Im.Proxy.VclCore.Model
         public bool HashAlwaysMiss { get; set; }
 
         public bool HashIgnoreBusy { get; set; }
+
+        public Stream Body { get; private set; }
+
+        public void CopyBodyFrom(Stream body)
+        {
+            var stream = new MemoryStream();
+            body.CopyTo(stream);
+            Body = stream;
+        }
     }
 }
