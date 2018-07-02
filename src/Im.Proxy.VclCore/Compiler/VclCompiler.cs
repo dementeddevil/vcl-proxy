@@ -3,10 +3,6 @@ using System.CodeDom;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Reflection;
-using System.Reflection.Emit;
-using System.Runtime.InteropServices;
 using Antlr4.Runtime;
 using Im.Proxy.VclCore.Model;
 using Microsoft.Extensions.Caching.Memory;
@@ -28,7 +24,7 @@ namespace Im.Proxy.VclCore.Compiler
 
         public void CompileAndBuildModule(string filename, string outputAssembly)
         {
-            var compilerResult = Compile(filename);
+            //var compilerResult = Compile(filename);
 
             // TODO: Create CodeDOM compile unit and namespace
 
@@ -150,8 +146,6 @@ namespace Im.Proxy.VclCore.Compiler
 
             return visitor.Visit(parser.compileUnit());
         }
-
-        private string GetSafeName(string entityKind, string entityName) => $"_{entityKind}_{entityName.Replace('-', '_')}";
     }
 
     public class VclCompilerContext
