@@ -83,6 +83,7 @@ namespace Im.Proxy.VclCore
             }
         }
 
+        #region Frontend State Machine
         private abstract class VclFrontendHandlerState
         {
             public abstract VclAction State { get; }
@@ -374,6 +375,9 @@ namespace Im.Proxy.VclCore
             }
         }
 
+        #endregion
+
+        #region Backend State Machine
         private abstract class VclBackendHandlerState
         {
             public abstract VclBackendAction State { get; }
@@ -523,6 +527,8 @@ namespace Im.Proxy.VclCore
             }
         }
 
+        #endregion
+
         private VclFrontendHandlerState _currentFrontendState = VclFrontendHandlerStateFactory.Get(VclAction.Restart);
         private VclBackendHandlerState _currentBackendState = VclBackendHandlerStateFactory.Get(VclBackendAction.Fetch);
 
@@ -533,7 +539,7 @@ namespace Im.Proxy.VclCore
         private int _maxBackendRetries = 3;
         private int _defaultTtl = 120;
 
-        public async Task ProcessRequest(RequestContext requestContext)
+        public async Task ProcessFrontendRequest(RequestContext requestContext)
         {
             var vclContext = new VclContext();
             vclContext.Request.Restarts = -1;
@@ -548,8 +554,8 @@ namespace Im.Proxy.VclCore
                 // Reset the context if we are in the restart state
                 if (_currentFrontendState.State == VclAction.Restart)
                 {
-                    //vclContext.Local.Ip = requestContext.Request.LocalIpAddress;
-                    //vclContext.Local.
+                    vclContext.Local.Ip = requestContext.Request.LocalIpAddress;
+                    vclContext.Remote.Ip = requestContext.Request.RemoteIpAddress;
                     vclContext.Client.Ip = requestContext.Request.RemoteIpAddress;
                     vclContext.Client.Port = requestContext.Request.RemotePort;
                     vclContext.Server.HostName = Environment.MachineName;
@@ -572,6 +578,57 @@ namespace Im.Proxy.VclCore
                 // Execute state object
                 _currentFrontendState.Execute(this, requestContext, vclContext);
             }
+        }
+
+        public virtual async void ProcessBackendFetch(VclContext context)
+        {
+            // TODO: Setup BE request parameters
+            context.BackendRequest = new VclBackendRequest();
+
+            // Allow hooks to issue modify backend fetch parameters
+            await VclBackendFetch(context);
+
+            // TODO: Issue request to backend
+            var httpClient = new HttpClient();
+            var backendRequest = new HttpRequestMessage();
+            backendRequest.Method = new HttpMethod(context.BackendRequest.Method);
+            backendRequest.RequestUri = new Uri(context.BackendRequest.Uri);
+            foreach (var entry in context.BackendRequest.Headers)
+            {
+                backendRequest.Headers.Add(entry.Key, entry.Value);
+            }
+
+            // Get raw response from backend
+            var backendResponse = await httpClient
+                .SendAsync(backendRequest)
+                .ConfigureAwait(false);
+
+
+            // TODO: Setup VCL backend response
+            context.BackendResponse = new VclBackendResponse();
+
+            // Setup response TTL value
+            if (backendResponse.Headers.CacheControl.SharedMaxAge != null)
+            {
+                context.BackendResponse.Ttl = (int)backendResponse.Headers.CacheControl.SharedMaxAge.Value.TotalSeconds;
+            }
+            else if (backendResponse.Headers.CacheControl.MaxAge != null)
+            {
+                context.BackendResponse.Ttl = (int)backendResponse.Headers.CacheControl.MaxAge.Value.TotalSeconds;
+            }
+            else if (backendResponse.Headers.TryGetValues("Expires", out var expiryValues))
+            {
+                var expiryDate = DateTime.Parse(expiryValues.First());
+                context.BackendResponse.Ttl = (int)(expiryDate - DateTime.UtcNow).TotalSeconds;
+            }
+            else
+            {
+                context.BackendResponse.Ttl = _defaultTtl;
+            }
+
+            // Pass control to vcl_backend_response method
+            await VclBackendResponse(context).ConfigureAwait(false);
+
         }
 
         public virtual void VclInit(VclContext context)
@@ -635,56 +692,6 @@ namespace Im.Proxy.VclCore
         {
         }
 
-        protected virtual async void ExecuteBackendFetch(VclContext context)
-        {
-            // TODO: Setup BE request parameters
-            context.BackendRequest = new VclBackendRequest();
-
-            // Allow hooks to issue modify backend fetch parameters
-            await VclBackendFetch(context);
-
-            // TODO: Issue request to backend
-            var httpClient = new HttpClient();
-            var backendRequest = new HttpRequestMessage();
-            backendRequest.Method = new HttpMethod(context.BackendRequest.Method);
-            backendRequest.RequestUri = new Uri(context.BackendRequest.Uri);
-            foreach (var entry in context.BackendRequest.Headers)
-            {
-                backendRequest.Headers.Add(entry.Key, entry.Value);
-            }
-
-            // Get raw response from backend
-            var backendResponse = await httpClient
-                .SendAsync(backendRequest)
-                .ConfigureAwait(false);
-
-
-            // TODO: Setup VCL backend response
-            context.BackendResponse = new VclBackendResponse();
-
-            // Setup response TTL value
-            if (backendResponse.Headers.CacheControl.SharedMaxAge != null)
-            {
-                context.BackendResponse.Ttl = (int)backendResponse.Headers.CacheControl.SharedMaxAge.Value.TotalSeconds;
-            }
-            else if (backendResponse.Headers.CacheControl.MaxAge != null)
-            {
-                context.BackendResponse.Ttl = (int)backendResponse.Headers.CacheControl.MaxAge.Value.TotalSeconds;
-            }
-            else if (backendResponse.Headers.TryGetValues("Expires", out var expiryValues))
-            {
-                var expiryDate = DateTime.Parse(expiryValues.First());
-                context.BackendResponse.Ttl = (int)(expiryDate - DateTime.UtcNow).TotalSeconds;
-            }
-            else
-            {
-                context.BackendResponse.Ttl = _defaultTtl;
-            }
-
-            // Pass control to vcl_backend_response method
-            await VclBackendResponse(context).ConfigureAwait(false);
-
-        }
 
         protected virtual Task<VclBackendAction> VclBackendFetch(VclContext context)
         {

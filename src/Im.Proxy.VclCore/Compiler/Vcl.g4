@@ -211,6 +211,10 @@ callStatement
 	:	'call' subroutineName=Identifier ';'
 	;
 
+hashDataStatement
+	:	'hash_data' '(' expr=expression ')' ';'
+	;
+
 returnStatement
 	:	{InCustomFunction}? 'return' ';'
 	|	'return' '(' returnStateExpression ')' ';'

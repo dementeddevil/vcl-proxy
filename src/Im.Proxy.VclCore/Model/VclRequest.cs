@@ -12,6 +12,8 @@ namespace Im.Proxy.VclCore.Model
     /// </remarks>
     public class VclRequest
     {
+        private int _requestHash = 185;
+
         public string RequestId { get; } = Guid.NewGuid().ToString("N");
 
         /// <summary>
@@ -114,6 +116,14 @@ namespace Im.Proxy.VclCore.Model
             var stream = new MemoryStream();
             body.CopyTo(stream);
             Body = stream;
+        }
+
+        public void AddToHash(object value)
+        {
+            // Combine the hash code and update the request hash value
+            var nullValue = "DummyNullValue".GetHashCode();
+            _requestHash = (_requestHash << 5) | (value?.GetHashCode() ?? nullValue);
+            Hash = $"RequestHash:{_requestHash}";
         }
     }
 }

@@ -301,6 +301,13 @@ namespace Im.Proxy.VclCore.Compiler
             return null;
         }
 
+        public override CodeObject VisitHashDataStatement(VclParser.HashDataStatementContext context)
+        {
+            var expr = VisitExpression(context.expr);
+            return new CodeMethodInvokeExpression(
+                );
+        }
+
         public override CodeObject VisitCompoundStatement(VclParser.CompoundStatementContext context)
         {
             _currentCompoundStatementVariables.Push(
