@@ -32,55 +32,40 @@ namespace Im.Proxy.VclCore.Compiler
             foreach (var method in compilerContext.MethodStatements)
             {
                 var methodName = method.Key;
-                var sysMethod = SystemFunctionToMethodInfoFactory.GetSystemMethodInfo(method.Key);
-                if (!string.IsNullOrWhiteSpace(sysMethod))
-                {
-                    var codeMethod = new CodeMemberMethod
-                        {
-                            Name = sysMethod,
-                            Attributes = MemberAttributes.Public |
-                                MemberAttributes.Override,
-                        };
-                    codeMethod.Statements.AddRange(method.Value);
+                var systemMethodName = SystemFunctionToMethodInfoFactory
+                    .GetSystemMethodName(method.Key);
 
-                    if (method.Key == "vcl_init" || method.Key == "vcl_term")
+                // Create code method
+                var codeMethod =
+                    new CodeMemberMethod
                     {
-                        codeMethod.ReturnType = new CodeTypeReference(typeof(void));
-                        codeMethod.Statements.Add(
+                        Attributes = MemberAttributes.Public,
+                        ReturnType = new CodeTypeReference(typeof(VclAction))
+                    };
+                codeMethod.Statements.AddRange(method.Value);
+
+                // System method overrides need a slightly different definition
+                if (!string.IsNullOrWhiteSpace(systemMethodName))
+                {
+                    codeMethod.Name = systemMethodName;
+                    codeMethod.Statements.Add(
+                        new CodeMethodReturnStatement(
                             new CodeMethodInvokeExpression(
                                 new CodeBaseReferenceExpression(),
-                                sysMethod));
-                    }
-                    else
-                    {
-                        codeMethod.ReturnType = new CodeTypeReference(typeof(VclAction));
-                        codeMethod.Statements.Add(
-                            new CodeMethodReturnStatement(
-                                new CodeMethodInvokeExpression(
-                                    new CodeBaseReferenceExpression(),
-                                    sysMethod)));
-                    }
+                                systemMethodName)));
 
-                    compilerContext.HandlerClass.Members.Add(codeMethod);
+                    // ReSharper disable once BitwiseOperatorOnEnumWithoutFlags
+                    codeMethod.Attributes |= MemberAttributes.Override;
                 }
                 else
                 {
-                    var codeMethod = 
-                        new CodeMemberMethod
-                        {
-                            Name = methodName,
-                            Attributes = MemberAttributes.Public |
-                            MemberAttributes.Override,
-                        };
-                    codeMethod.Statements.AddRange(method.Value);
-
-                    codeMethod.ReturnType = new CodeTypeReference(typeof(VclAction));
+                    codeMethod.Name = methodName;
                     codeMethod.Statements.Add(
                         new CodeMethodReturnStatement(
                             new CodePrimitiveExpression(VclAction.NoOp)));
-
-                    compilerContext.HandlerClass.Members.Add(codeMethod);
                 }
+
+                compilerContext.HandlerClass.Members.Add(codeMethod);
             }
 
             // Create namespace Im.Proxy.Handlers

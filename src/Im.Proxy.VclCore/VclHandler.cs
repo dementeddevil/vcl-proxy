@@ -816,8 +816,9 @@ namespace Im.Proxy.VclCore
             return _currentBackendState.State;
         }
 
-        public virtual void VclInit(VclContext context)
+        public virtual VclAction VclInit(VclContext context)
         {
+            return VclAction.NoOp;
         }
 
         public virtual VclAction VclReceive(VclContext context)
@@ -875,8 +876,9 @@ namespace Im.Proxy.VclCore
             return VclAction.Deliver;
         }
 
-        public virtual void VclTerm(VclContext context)
+        public virtual VclAction VclTerm(VclContext context)
         {
+            return VclAction.NoOp;
         }
 
         public virtual VclBackendAction VclBackendFetch(VclContext context)

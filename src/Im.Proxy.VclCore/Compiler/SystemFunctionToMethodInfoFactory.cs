@@ -26,7 +26,7 @@ namespace Im.Proxy.VclCore.Compiler
                 { "vcl_term", nameof(VclHandler.VclTerm) }
             };
 
-        public static string GetSystemMethodInfo(string vclSubroutineName)
+        public static string GetSystemMethodName(string vclSubroutineName)
         {
             return MethodLookup.TryGetValue(vclSubroutineName, out var mi) ? mi : null;
         }
