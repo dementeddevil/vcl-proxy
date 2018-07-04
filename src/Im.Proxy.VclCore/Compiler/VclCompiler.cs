@@ -1,5 +1,6 @@
 ﻿using System;
 using System.CodeDom;
+using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -27,30 +28,83 @@ namespace Im.Proxy.VclCore.Compiler
             // Compile the file
             var compilerContext = Compile(filename);
 
-            // TODO: Create CodeDOM compile unit and namespace
+            // Insert derived class methods
             foreach (var method in compilerContext.MethodStatements)
             {
                 var methodName = method.Key;
                 var sysMethod = SystemFunctionToMethodInfoFactory.GetSystemMethodInfo(method.Key);
                 if (!string.IsNullOrWhiteSpace(sysMethod))
                 {
-                    compilerContext.HandlerClass.Members.Add(
-                        new CodeMemberMethod
+                    var codeMethod = new CodeMemberMethod
                         {
-                            ReturnType = 
-                        });
+                            Name = sysMethod,
+                            Attributes = MemberAttributes.Public |
+                                MemberAttributes.Override,
+                        };
+                    codeMethod.Statements.AddRange(method.Value);
+
+                    if (method.Key == "vcl_init" || method.Key == "vcl_term")
+                    {
+                        codeMethod.ReturnType = new CodeTypeReference(typeof(void));
+                        codeMethod.Statements.Add(
+                            new CodeMethodInvokeExpression(
+                                new CodeBaseReferenceExpression(),
+                                sysMethod));
+                    }
+                    else
+                    {
+                        codeMethod.ReturnType = new CodeTypeReference(typeof(VclAction));
+                        codeMethod.Statements.Add(
+                            new CodeMethodReturnStatement(
+                                new CodeMethodInvokeExpression(
+                                    new CodeBaseReferenceExpression(),
+                                    sysMethod)));
+                    }
+
+                    compilerContext.HandlerClass.Members.Add(codeMethod);
                 }
                 else
                 {
+                    var codeMethod = 
+                        new CodeMemberMethod
+                        {
+                            Name = methodName,
+                            Attributes = MemberAttributes.Public |
+                            MemberAttributes.Override,
+                        };
+                    codeMethod.Statements.AddRange(method.Value);
 
+                    codeMethod.ReturnType = new CodeTypeReference(typeof(VclAction));
+                    codeMethod.Statements.Add(
+                        new CodeMethodReturnStatement(
+                            new CodePrimitiveExpression(VclAction.NoOp)));
+
+                    compilerContext.HandlerClass.Members.Add(codeMethod);
                 }
             }
 
-            // TODO: Inject handler class
+            // Create namespace Im.Proxy.Handlers
+            var codeNamespace = new CodeNamespace("Im.Proxy.Handlers");
+            codeNamespace.Types.Add(compilerContext.HandlerClass);
+
+            // Create code unit
+            var unit = new CodeCompileUnit();
+            unit.Namespaces.Add(codeNamespace);
+            unit.ReferencedAssemblies.Add(typeof(VclCompiler).Assembly.GetName().FullName);
 
             // TODO: Inject assembly information attributes
 
-            // TODO: Write assembly
+            // Write assembly
+            var options =
+                new CompilerParameters
+                {
+
+                };
+            var compileResults = CodeDomProvider
+                .CreateProvider("CSharp")
+                .CompileAssemblyFromDom(
+                    options,
+                    unit);
 
             // TODO: Sign assembly using our signing key
 

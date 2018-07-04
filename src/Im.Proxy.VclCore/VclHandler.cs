@@ -850,8 +850,9 @@ namespace Im.Proxy.VclCore
             return VclAction.Done;
         }
 
-        public virtual void VclFetch(VclContext context)
+        public virtual VclAction VclFetch(VclContext context)
         {
+            return VclAction.Fetch;
         }
 
         public virtual VclAction VclDeliver(VclContext context)
