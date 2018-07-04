@@ -153,6 +153,7 @@
       <DependentUpon>Vcl.g4</DependentUpon>
     </Compile>
     <Compile Include="Runtime\WebListenerProxy.cs" />
+    <Compile Include="Compiler\SystemFunctionToMethodInfoFactory.cs" />
     <Compile Include="VclHandler.cs" />
     <Compile Include="Model\VclProbe.cs" />
   </ItemGroup>

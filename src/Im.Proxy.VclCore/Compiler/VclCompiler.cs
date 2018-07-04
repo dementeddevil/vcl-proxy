@@ -24,14 +24,32 @@ namespace Im.Proxy.VclCore.Compiler
 
         public void CompileAndBuildModule(string filename, string outputAssembly)
         {
-            //var compilerResult = Compile(filename);
+            // Compile the file
+            var compilerContext = Compile(filename);
 
             // TODO: Create CodeDOM compile unit and namespace
+            foreach (var method in compilerContext.MethodStatements)
+            {
+                var methodName = method.Key;
+                var sysMethod = SystemFunctionToMethodInfoFactory.GetSystemMethodInfo(method.Key);
+                if (!string.IsNullOrWhiteSpace(sysMethod))
+                {
+                    compilerContext.HandlerClass.Members.Add(
+                        new CodeMemberMethod
+                        {
+                            ReturnType = 
+                        });
+                }
+                else
+                {
+
+                }
+            }
 
             // TODO: Inject handler class
 
             // TODO: Inject assembly information attributes
-            
+
             // TODO: Write assembly
 
             // TODO: Sign assembly using our signing key

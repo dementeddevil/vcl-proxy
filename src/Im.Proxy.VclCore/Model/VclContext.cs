@@ -40,7 +40,7 @@
         /// <value>
         /// The top request is only valid during ESI processing.
         /// </value>
-        public VclRequest TopRequest { get; set; } = null;
+        public VclRequest TopRequest { get; set; }
 
         /// <summary>
         /// Gets or sets the request.
@@ -56,7 +56,7 @@
         /// <value>
         /// The object.
         /// </value>
-        public VclObject Object { get; set; } = new VclObject();
+        public VclObject Object { get; set; }
 
         public VclBackendRequest BackendRequest { get; set; }
 
