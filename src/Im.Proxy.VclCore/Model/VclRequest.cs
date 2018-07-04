@@ -33,12 +33,13 @@ namespace Im.Proxy.VclCore.Model
         public string Url { get; set; }
 
         /// <summary>
-        /// Gets or sets the HTTP.
+        /// Gets or sets the HTTP header collection.
         /// </summary>
         /// <value>
         /// The HTTP.
         /// </value>
-        public IDictionary<string, string> Headers { get; set; }
+        public IDictionary<string, string> Headers { get; } =
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// Gets or sets the HTTP protocol version.
@@ -115,6 +116,7 @@ namespace Im.Proxy.VclCore.Model
         {
             var stream = new MemoryStream();
             body.CopyTo(stream);
+            stream.Position = 0;
             Body = stream;
         }
 

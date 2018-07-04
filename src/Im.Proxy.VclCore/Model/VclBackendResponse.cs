@@ -1,7 +1,24 @@
-﻿namespace Im.Proxy.VclCore.Model
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+
+namespace Im.Proxy.VclCore.Model
 {
     public class VclBackendResponse
     {
+        public int StatusCode { get; set; }
+
+        public string StatusDescription { get; set; }
+
+        /// <summary>
+        /// Gets or sets the HTTP header collection.
+        /// </summary>
+        /// <value>
+        /// The HTTP.
+        /// </value>
+        public IDictionary<string, string> Headers { get; } =
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
         /// <summary>
         /// Gets or sets the Time To Live for the response in seconds.
         /// </summary>
@@ -31,5 +48,15 @@
         /// content.
         /// </remarks>
         public bool DoEsiProcessing { get; set; }
+
+        public Stream Body { get; private set; }
+
+        public void CopyBodyFrom(Stream body)
+        {
+            var stream = new MemoryStream();
+            body.CopyTo(stream);
+            stream.Position = 0;
+            Body = stream;
+        }
     }
 }

@@ -1,18 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Reflection;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Im.Proxy.VclCore.Model;
 using Microsoft.Net.Http.Server;
 
 namespace Im.Proxy.VclCore.Runtime
 {
-    public class WebListenerProxy
+    public class WebListenerProxy : IDisposable
     {
-        private WebListener _webListener = new WebListener();
-        private IList<Task> _handlerThreads = new List<Task>();
-        private CancellationTokenSource _shutdown = new CancellationTokenSource();
+        private readonly WebListener _webListener = new WebListener();
+        private readonly IList<Task> _handlerThreads = new List<Task>();
+        private readonly CancellationTokenSource _shutdown = new CancellationTokenSource();
         private readonly Type _vclHandlerType;
 
         public WebListenerProxy(string host, int hostPort, Type vclHandlerType)
@@ -29,6 +28,24 @@ namespace Im.Proxy.VclCore.Runtime
             {
                 _handlerThreads.Add(Task.Run(AcceptHandlerThread));
             }
+        }
+
+        public void Stop()
+        {
+            _shutdown.Cancel();
+        }
+
+        public void Dispose()
+        {
+            _shutdown.Cancel();
+            Task.WaitAll(_handlerThreads.ToArray());
+            foreach (var task in _handlerThreads)
+            {
+                task.Dispose();
+            }
+            _handlerThreads.Clear();
+            _webListener.Dispose();
+            _shutdown.Dispose();
         }
 
         private async Task AcceptHandlerThread()
@@ -54,42 +71,13 @@ namespace Im.Proxy.VclCore.Runtime
                     handler.VclInit(null);
                 }
 
-                // Enter processing loop
-                // Create VCL context from inbound context
-
-                // TODO: Read and buffer request data if any
-
-                // Loop until we reach "done" state
-                var vclContext = new VclContext();
-                while (_currentFrontendState.State != VclAction.Done)
-                {
-                    // Reset the context if we are in the restart state
-                    if (_currentFrontendState.State == VclAction.Restart)
-                    {
-                        vclContext.Client.Ip = context.Connection.RemoteIpAddress;
-                        vclContext.Server.HostName = Environment.MachineName;
-                        vclContext.Server.Identity = "foobar";
-                        vclContext.Server.Ip = context.Connection.LocalIpAddress;
-                        vclContext.Server.Port = context.Connection.LocalPort;
-                        vclContext.Request.Method = context.Request.Method;
-                        vclContext.Request.Url = uri.ToString();
-                        foreach (var header in context.Request.Headers)
-                        {
-                            vclContext.Request.Headers.Add(header.Key, header.Value.ToString());
-                        }
-                    }
-
-                    // Pass execution to current state
-                    // TODO: We probably need to pass the original context so we can handle sending the reply
-                    _currentFrontendState.Execute(this, context, vclContext);
-                }
-
+                // Pass request to the handler for execution
+                await handler
+                    .ProcessFrontendRequestAsync(requestContext)
+                    .ConfigureAwait(false);
             }
 
-            if (handler != null)
-            {
-                handler.VclTerm(null);
-            }
+            handler?.VclTerm(null);
         }
     }
 }

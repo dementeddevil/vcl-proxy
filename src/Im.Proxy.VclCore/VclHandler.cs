@@ -2,12 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Reflection;
-using System.Text;
 using System.Threading.Tasks;
 using Im.Proxy.VclCore.Model;
-using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Primitives;
 using Microsoft.Net.Http.Server;
 
 namespace Im.Proxy.VclCore
@@ -54,30 +51,30 @@ namespace Im.Proxy.VclCore
     /// </remarks>
     public class VclHandler
     {
-
         private static class SystemFunctionToMethodInfoFactory
         {
-            private static readonly Dictionary<string, MethodInfo> MethodLookup =
-                new Dictionary<string, MethodInfo>()
+            private static readonly Dictionary<string, string> MethodLookup =
+                new Dictionary<string, string>()
                 {
-                    { "vcl_init", typeof(VclHandler).GetMethod(nameof(VclInit)) },
-                    { "vcl_recv", typeof(VclHandler).GetMethod(nameof(VclReceive)) },
-                    { "vcl_hash", typeof(VclHandler).GetMethod(nameof(VclHash)) },
-                    { "vcl_pipe", typeof(VclHandler).GetMethod(nameof(VclPipe)) },
-                    { "vcl_pass", typeof(VclHandler).GetMethod(nameof(VclPass)) },
-                    { "vcl_hit", typeof(VclHandler).GetMethod(nameof(VclHit)) },
-                    { "vcl_miss", typeof(VclHandler).GetMethod(nameof(VclMiss)) },
-                    { "vcl_fetch", typeof(VclHandler).GetMethod(nameof(VclFetch)) },
-                    { "vcl_deliver", typeof(VclHandler).GetMethod(nameof(VclDeliver)) },
-                    { "vcl_purge", typeof(VclHandler).GetMethod(nameof(VclPurge)) },
-                    { "vcl_synth", typeof(VclHandler).GetMethod(nameof(VclSynth)) },
-                    { "vcl_error", typeof(VclHandler).GetMethod(nameof(VclError)) },
-                    { "vcl_backend_fetch", typeof(VclHandler).GetMethod(nameof(VclBackendFetch)) },
-                    { "vcl_backend_response", typeof(VclHandler).GetMethod(nameof(VclBackendResponse)) },
-                    { "vcl_backend_error", typeof(VclHandler).GetMethod(nameof(VclBackendError)) },
+                    { "vcl_init", nameof(VclInit) },
+                    { "vcl_recv", nameof(VclReceive) },
+                    { "vcl_hash", nameof(VclHash) },
+                    { "vcl_pipe", nameof(VclPipe) },
+                    { "vcl_pass", nameof(VclPass) },
+                    { "vcl_hit", nameof(VclHit) },
+                    { "vcl_miss", nameof(VclMiss) },
+                    { "vcl_fetch", nameof(VclFetch) },
+                    { "vcl_deliver", nameof(VclDeliver) },
+                    { "vcl_purge", nameof(VclPurge) },
+                    { "vcl_synth", nameof(VclSynth) },
+                    { "vcl_error", nameof(VclError) },
+                    { "vcl_backend_fetch", nameof(VclBackendFetch) },
+                    { "vcl_backend_response", nameof(VclBackendResponse) },
+                    { "vcl_backend_error", nameof(VclBackendError) },
+                    { "vcl_term", nameof(VclTerm) }
                 };
 
-            public static MethodInfo GetSystemMethodInfo(string vclSubroutineName)
+            public static string GetSystemMethodInfo(string vclSubroutineName)
             {
                 return MethodLookup.TryGetValue(vclSubroutineName, out var mi) ? mi : null;
             }
@@ -90,7 +87,7 @@ namespace Im.Proxy.VclCore
 
             protected abstract VclAction[] ValidTransitionStates { get; }
 
-            public abstract void Execute(VclHandler handler, RequestContext requestContext, VclContext vclContext);
+            public abstract Task ExecuteAsync(VclHandler handler, RequestContext requestContext, VclContext vclContext);
 
             protected virtual void SwitchState(VclHandler handler, VclAction action)
             {
@@ -111,17 +108,40 @@ namespace Im.Proxy.VclCore
                     VclAction.Receive
                 };
 
-            public override void Execute(VclHandler handler, RequestContext requestContext, VclContext vclContext)
+            public override Task ExecuteAsync(VclHandler handler, RequestContext requestContext, VclContext vclContext)
             {
-                ++handler._frontendAttempt;
-                if (handler._frontendAttempt >= handler._maxFrontendRetries)
+                // Update restart count and abort with hard error if we exceed max-retries
+                // TODO: Read max restarts value from configuration
+                vclContext.Request.Restarts++;
+                if (vclContext.Request.Restarts >= handler._maxFrontendRetries)
                 {
+                    vclContext.Response.StatusCode = 500;
+                    vclContext.Response.StatusDescription = "IMProxy request failed";
                     SwitchState(handler, VclAction.Synth);
+                    return Task.CompletedTask;
                 }
-                else
+
+                vclContext.Local.Ip = requestContext.Request.LocalIpAddress;
+                vclContext.Remote.Ip = requestContext.Request.RemoteIpAddress;
+                vclContext.Client.Ip = requestContext.Request.RemoteIpAddress;
+                vclContext.Client.Port = requestContext.Request.RemotePort;
+                vclContext.Server.HostName = Environment.MachineName;
+                vclContext.Server.Identity = "foobar";
+                vclContext.Server.Ip = requestContext.Request.LocalIpAddress;
+                vclContext.Server.Port = requestContext.Request.LocalPort;
+                vclContext.Request.Method = requestContext.Request.Method;
+                vclContext.Request.Url = requestContext.Request.RawUrl;
+                vclContext.Request.CanGzip =
+                    requestContext.Request.Headers["Accept-Encoding"].Equals("gzip") ||
+                    requestContext.Request.Headers["Accept-Encoding"].Equals("x-gzip");
+                vclContext.Request.ProtocolVersion = requestContext.Request.ProtocolVersion.ToString(2);
+                foreach (var header in requestContext.Request.Headers)
                 {
-                    SwitchState(handler, VclAction.Receive);
+                    vclContext.Request.Headers.Add(header.Key, header.Value.ToString());
                 }
+
+                SwitchState(handler, VclAction.Receive);
+                return Task.CompletedTask;
             }
         }
 
@@ -139,16 +159,18 @@ namespace Im.Proxy.VclCore
                     VclAction.Synth
                 };
 
-            public override async void Execute(VclHandler handler, RequestContext requestContext, VclContext vclContext)
+            public override Task ExecuteAsync(VclHandler handler, RequestContext requestContext, VclContext vclContext)
             {
+                // Allow VCL to tweak receive parameters
                 var nextState = handler.VclReceive(vclContext);
                 SwitchState(handler, nextState);
+                return Task.CompletedTask;
             }
         }
 
         private class VclHashFrontendHandlerState : VclFrontendHandlerState
         {
-            public override VclAction State => VclAction.Pipe;
+            public override VclAction State => VclAction.Hash;
 
             protected override VclAction[] ValidTransitionStates =>
                 new[]
@@ -156,10 +178,11 @@ namespace Im.Proxy.VclCore
                     VclAction.Lookup
                 };
 
-            public override async void Execute(VclHandler handler, RequestContext requestContext, VclContext vclContext)
+            public override Task ExecuteAsync(VclHandler handler, RequestContext requestContext, VclContext vclContext)
             {
                 var nextState = handler.VclHash(vclContext);
                 SwitchState(handler, nextState);
+                return Task.CompletedTask;
             }
         }
 
@@ -176,7 +199,7 @@ namespace Im.Proxy.VclCore
                     VclAction.Busy
                 };
 
-            public override void Execute(VclHandler handler, RequestContext requestContext, VclContext vclContext)
+            public override Task ExecuteAsync(VclHandler handler, RequestContext requestContext, VclContext vclContext)
             {
                 // TODO: Attempt to do a lookup given the hash code
                 // we will either end up with a cache hit, miss or something else
@@ -184,6 +207,7 @@ namespace Im.Proxy.VclCore
                 // For now simply skip trying to do any cache lookup whatsoever
                 //  and switch to Miss state
                 SwitchState(handler, VclAction.Miss);
+                return Task.CompletedTask;
             }
         }
 
@@ -201,10 +225,11 @@ namespace Im.Proxy.VclCore
                     VclAction.Pass
                 };
 
-            public override void Execute(VclHandler handler, RequestContext requestContext, VclContext vclContext)
+            public override Task ExecuteAsync(VclHandler handler, RequestContext requestContext, VclContext vclContext)
             {
                 var nextState = handler.VclHit(vclContext);
                 SwitchState(handler, nextState);
+                return Task.CompletedTask;
             }
         }
 
@@ -221,10 +246,11 @@ namespace Im.Proxy.VclCore
                     VclAction.Pass
                 };
 
-            public override void Execute(VclHandler handler, RequestContext requestContext, VclContext vclContext)
+            public override Task ExecuteAsync(VclHandler handler, RequestContext requestContext, VclContext vclContext)
             {
                 var nextState = handler.VclMiss(vclContext);
                 SwitchState(handler, nextState);
+                return Task.CompletedTask;
             }
         }
 
@@ -240,10 +266,11 @@ namespace Im.Proxy.VclCore
                     VclAction.Restart
                 };
 
-            public override void Execute(VclHandler handler, RequestContext requestContext, VclContext vclContext)
+            public override Task ExecuteAsync(VclHandler handler, RequestContext requestContext, VclContext vclContext)
             {
                 var nextState = handler.VclPass(vclContext);
                 SwitchState(handler, nextState);
+                return Task.CompletedTask;
             }
         }
 
@@ -258,10 +285,11 @@ namespace Im.Proxy.VclCore
                     VclAction.Fetch
                 };
 
-            public override void Execute(VclHandler handler, RequestContext requestContext, VclContext vclContext)
+            public override Task ExecuteAsync(VclHandler handler, RequestContext requestContext, VclContext vclContext)
             {
                 var nextState = handler.VclPipe(vclContext);
                 SwitchState(handler, nextState);
+                return Task.CompletedTask;
             }
         }
 
@@ -276,16 +304,17 @@ namespace Im.Proxy.VclCore
                     VclAction.Restart
                 };
 
-            public override void Execute(VclHandler handler, RequestContext requestContext, VclContext vclContext)
+            public override Task ExecuteAsync(VclHandler handler, RequestContext requestContext, VclContext vclContext)
             {
                 var nextState = handler.VclPurge(vclContext);
                 SwitchState(handler, nextState);
+                return Task.CompletedTask;
             }
         }
 
         private class VclDeliverFrontendHandlerState : VclFrontendHandlerState
         {
-            public override VclAction State => VclAction.Pipe;
+            public override VclAction State => VclAction.Deliver;
 
             protected override VclAction[] ValidTransitionStates =>
                 new[]
@@ -295,16 +324,17 @@ namespace Im.Proxy.VclCore
                     VclAction.DeliverContent
                 };
 
-            public override void Execute(VclHandler handler, RequestContext requestContext, VclContext vclContext)
+            public override Task ExecuteAsync(VclHandler handler, RequestContext requestContext, VclContext vclContext)
             {
                 var nextState = handler.VclDeliver(vclContext);
                 SwitchState(handler, nextState);
+                return Task.CompletedTask;
             }
         }
 
         private class VclSynthFrontendHandlerState : VclFrontendHandlerState
         {
-            public override VclAction State => VclAction.Pipe;
+            public override VclAction State => VclAction.Synth;
 
             protected override VclAction[] ValidTransitionStates =>
                 new[]
@@ -313,10 +343,11 @@ namespace Im.Proxy.VclCore
                     VclAction.Restart
                 };
 
-            public override void Execute(VclHandler handler, RequestContext requestContext, VclContext vclContext)
+            public override Task ExecuteAsync(VclHandler handler, RequestContext requestContext, VclContext vclContext)
             {
-                var nextState = handler.VclPurge(vclContext);
+                var nextState = handler.VclSynth(vclContext);
                 SwitchState(handler, nextState);
+                return Task.CompletedTask;
             }
         }
 
@@ -330,10 +361,24 @@ namespace Im.Proxy.VclCore
                     VclAction.Done
                 };
 
-            public override async void Execute(VclHandler handler, RequestContext requestContext, VclContext vclContext)
+            public override Task ExecuteAsync(VclHandler handler, RequestContext requestContext, VclContext vclContext)
             {
+                // Setup real response
+                requestContext.Response.StatusCode = vclContext.Response.StatusCode;
+                requestContext.Response.ReasonPhrase = vclContext.Response.StatusDescription;
+                foreach (var header in vclContext.Response.Headers)
+                {
+                    requestContext.Response.Headers.Add(header.Key, new StringValues(header.Value));
+                }
+
+                // Copy content body if we have one
+                vclContext.Response.Body?.CopyTo(requestContext.Response.Body);
+
+                // TODO: Setup cache TTL value (this uses kernel caching in HTTP.SYS driver)
+                //requestContext.Response.CacheTtl = TimeSpan.FromSeconds(vclContext.Response.)
 
                 SwitchState(handler, VclAction.Done);
+                return Task.CompletedTask;
             }
         }
 
@@ -343,8 +388,9 @@ namespace Im.Proxy.VclCore
 
             protected override VclAction[] ValidTransitionStates => new VclAction[0];
 
-            public override void Execute(VclHandler handler, RequestContext requestContext, VclContext vclContext)
+            public override Task ExecuteAsync(VclHandler handler, RequestContext requestContext, VclContext vclContext)
             {
+                return Task.CompletedTask;
             }
         }
 
@@ -374,7 +420,6 @@ namespace Im.Proxy.VclCore
                 return KnownStates[action];
             }
         }
-
         #endregion
 
         #region Backend State Machine
@@ -526,20 +571,18 @@ namespace Im.Proxy.VclCore
                 return KnownStates[action];
             }
         }
-
         #endregion
 
         private VclFrontendHandlerState _currentFrontendState = VclFrontendHandlerStateFactory.Get(VclAction.Restart);
         private VclBackendHandlerState _currentBackendState = VclBackendHandlerStateFactory.Get(VclBackendAction.Fetch);
 
-        private int _frontendAttempt;
         private int _maxFrontendRetries = 5;
 
         private int _backendAttempt;
         private int _maxBackendRetries = 3;
         private int _defaultTtl = 120;
 
-        public async Task ProcessFrontendRequest(RequestContext requestContext)
+        public async Task ProcessFrontendRequestAsync(RequestContext requestContext)
         {
             var vclContext = new VclContext();
             vclContext.Request.Restarts = -1;
@@ -551,48 +594,43 @@ namespace Im.Proxy.VclCore
             _currentFrontendState = VclFrontendHandlerStateFactory.Get(VclAction.Restart);
             while (_currentFrontendState.State != VclAction.Done)
             {
-                // Reset the context if we are in the restart state
-                if (_currentFrontendState.State == VclAction.Restart)
-                {
-                    vclContext.Local.Ip = requestContext.Request.LocalIpAddress;
-                    vclContext.Remote.Ip = requestContext.Request.RemoteIpAddress;
-                    vclContext.Client.Ip = requestContext.Request.RemoteIpAddress;
-                    vclContext.Client.Port = requestContext.Request.RemotePort;
-                    vclContext.Server.HostName = Environment.MachineName;
-                    vclContext.Server.Identity = "foobar";
-                    vclContext.Server.Ip = requestContext.Request.LocalIpAddress;
-                    vclContext.Server.Port = requestContext.Request.LocalPort;
-                    vclContext.Request.Method = requestContext.Request.Method;
-                    vclContext.Request.Url = requestContext.Request.RawUrl;
-                    vclContext.Request.CanGzip =
-                        requestContext.Request.Headers["Accept-Encoding"].Equals("gzip") ||
-                        requestContext.Request.Headers["Accept-Encoding"].Equals("x-gzip");
-                    vclContext.Request.ProtocolVersion = requestContext.Request.ProtocolVersion.ToString(2);
-                    vclContext.Request.Restarts++;
-                    foreach (var header in requestContext.Request.Headers)
-                    {
-                        vclContext.Request.Headers.Add(header.Key, header.Value.ToString());
-                    }
-                }
-
-                // Execute state object
-                _currentFrontendState.Execute(this, requestContext, vclContext);
+                await _currentFrontendState.ExecuteAsync(this, requestContext, vclContext).ConfigureAwait(false);
             }
         }
 
-        public virtual async void ProcessBackendFetch(VclContext context)
+        public virtual async Task<VclBackendAction> ProcessBackendFetchAsync(VclContext context)
         {
-            // TODO: Setup BE request parameters
-            context.BackendRequest = new VclBackendRequest();
+            // Setup BE request parameters
+            context.BackendRequest =
+                new VclBackendRequest
+                {
+                    Method = context.Request.Method,
+                    Uri = context.Request.Url
+                };
+            foreach (var entry in context.Request.Headers)
+            {
+                context.BackendRequest.Headers.Add(entry.Key, entry.Value);
+            }
+
+            // TODO: Handle translation of certain request METHOD values
+            // TODO: Handle filtering out certain HTTP headers
+            // TODO: Handle adding/modifying certain HTTP headers
 
             // Allow hooks to issue modify backend fetch parameters
-            await VclBackendFetch(context);
+            var result = VclBackendFetch(context);
+            if (result != VclBackendAction.Fetch)
+            {
+                return result;
+            }
 
-            // TODO: Issue request to backend
+            // Issue request to backend
             var httpClient = new HttpClient();
-            var backendRequest = new HttpRequestMessage();
-            backendRequest.Method = new HttpMethod(context.BackendRequest.Method);
-            backendRequest.RequestUri = new Uri(context.BackendRequest.Uri);
+            var backendRequest =
+                new HttpRequestMessage
+                {
+                    Method = new HttpMethod(context.BackendRequest.Method),
+                    RequestUri = new Uri(context.BackendRequest.Uri)
+                };
             foreach (var entry in context.BackendRequest.Headers)
             {
                 backendRequest.Headers.Add(entry.Key, entry.Value);
@@ -603,9 +641,35 @@ namespace Im.Proxy.VclCore
                 .SendAsync(backendRequest)
                 .ConfigureAwait(false);
 
+            // Setup VCL backend response
+            context.BackendResponse = 
+                new VclBackendResponse
+                {
+                    StatusCode = (int)backendResponse.StatusCode,
+                    StatusDescription = backendResponse.ReasonPhrase
+                };
+            foreach (var item in backendResponse.Headers)
+            {
+                context.BackendResponse.Headers.Add(item.Key, string.Join(",", item.Value));
+            }
 
-            // TODO: Setup VCL backend response
-            context.BackendResponse = new VclBackendResponse();
+            // Detect backend error
+            if (!backendResponse.IsSuccessStatusCode)
+            {
+                VclBackendError(context);
+                return VclBackendAction.Error;
+            }
+
+            // If we have a content body in the response then copy it now
+            // TODO: May need to steal VirtualStream code that uses MemoryStream until content
+            //  exceeds certain size where it switches to a temporary file
+            if (backendResponse.Content != null)
+            {
+                using (var contentBodyStream = await backendResponse.Content.ReadAsStreamAsync())
+                {
+                    context.BackendResponse.CopyBodyFrom(contentBodyStream);
+                }
+            }
 
             // Setup response TTL value
             if (backendResponse.Headers.CacheControl.SharedMaxAge != null)
@@ -627,8 +691,13 @@ namespace Im.Proxy.VclCore
             }
 
             // Pass control to vcl_backend_response method
-            await VclBackendResponse(context).ConfigureAwait(false);
+            result = VclBackendResponse(context);
+            if (result == VclBackendAction.Error)
+            {
+                VclBackendError(context);
+            }
 
+            return result;
         }
 
         public virtual void VclInit(VclContext context)
@@ -693,19 +762,18 @@ namespace Im.Proxy.VclCore
         }
 
 
-        protected virtual Task<VclBackendAction> VclBackendFetch(VclContext context)
+        protected virtual VclBackendAction VclBackendFetch(VclContext context)
         {
-            return VclBackendAction.Fetch);
+            return VclBackendAction.Fetch;
         }
 
-        protected virtual Task VclBackendResponse(VclContext context)
+        protected virtual VclBackendAction VclBackendResponse(VclContext context)
         {
-            return Task.CompletedTask;
+            return VclBackendAction.Done;
         }
 
-        protected virtual Task VclBackendError(VclContext context)
+        protected virtual void VclBackendError(VclContext context)
         {
-            return Task.CompletedTask;
         }
     }
 
