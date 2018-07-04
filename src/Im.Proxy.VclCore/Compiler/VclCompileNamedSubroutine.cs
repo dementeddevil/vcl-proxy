@@ -39,7 +39,7 @@ namespace Im.Proxy.VclCore.Compiler
 
                     return new CodePropertyReferenceExpression(
                             new CodePropertyReferenceExpression(
-                                vclContextExpression, _logicalName), 
+                                vclContextExpression, _logicalName),
                             _mapper[memberName].Item1)
                         .SetExpressionType(_mapper[memberName].Item2);
                 }
@@ -303,9 +303,16 @@ namespace Im.Proxy.VclCore.Compiler
 
         public override CodeObject VisitHashDataStatement(VclParser.HashDataStatementContext context)
         {
-            var expr = VisitExpression(context.expr);
+            // Get expression to add to the hash
+            var expr = (CodeExpression)VisitExpression(context.expr);
+
+            // Return method call to context.Request.AddToHash
             return new CodeMethodInvokeExpression(
-                );
+                new CodePropertyReferenceExpression(
+                    new CodeArgumentReferenceExpression("context"),
+                    "Request"),
+                "AddToHash",
+                expr);
         }
 
         public override CodeObject VisitCompoundStatement(VclParser.CompoundStatementContext context)
