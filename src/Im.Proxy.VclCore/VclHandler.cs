@@ -32,13 +32,12 @@ namespace Im.Proxy.VclCore
 
     public enum VclBackendAction
     {
-        Abandon,
+        Retry,
         Fetch,
         Response,
-        Retry,
-        Deliver,
         Error,
-        Done
+        Deliver,
+        Abandon
     }
 
     /// <summary>
@@ -429,29 +428,55 @@ namespace Im.Proxy.VclCore
 
             protected abstract VclBackendAction[] ValidTransitionStates { get; }
 
-            public abstract void Execute(VclHandler handler, VclContext vclContext);
+            public abstract Task ExecuteAsync(VclHandler handler, VclContext vclContext);
 
-            protected virtual void SwitchState(VclHandler handler, VclAction action)
+            protected virtual void SwitchState(VclHandler handler, VclBackendAction action)
             {
                 // By default we allow the switch to the new state
                 // Derived classes may apply restriction to transitions allowed
-                handler._currentFrontendState = VclFrontendHandlerStateFactory.Get(action);
+                handler._currentBackendState = VclBackendHandlerStateFactory.Get(action);
             }
         }
 
-        private class VclAbandonBackendHandlerState : VclBackendHandlerState
+        private class VclRetryBackendHandlerState : VclBackendHandlerState
         {
-            public override VclBackendAction State => VclBackendAction.Abandon;
+            public override VclBackendAction State => VclBackendAction.Retry;
 
             protected override VclBackendAction[] ValidTransitionStates =>
                 new[]
                 {
-                    VclBackendAction.Done,
+                    VclBackendAction.Abandon,
+                    VclBackendAction.Fetch
                 };
 
-            public override void Execute(VclHandler handler, VclContext vclContext)
+            public override Task ExecuteAsync(VclHandler handler, VclContext vclContext)
             {
+                // Handle case where we exceed number of backend retries
+                if (++handler._backendAttempt >= handler._maxBackendRetries)
+                {
+                    SwitchState(handler, VclBackendAction.Abandon);
+                    return Task.CompletedTask;
+                }
 
+                // Setup BE request parameters
+                vclContext.BackendRequest =
+                    new VclBackendRequest
+                    {
+                        Method = vclContext.Request.Method,
+                        Uri = vclContext.Request.Url
+                    };
+                foreach (var entry in vclContext.Request.Headers)
+                {
+                    vclContext.BackendRequest.Headers.Add(entry.Key, entry.Value);
+                }
+
+                // TODO: Handle translation of certain request METHOD values
+                // TODO: Handle filtering out certain HTTP headers
+                // TODO: Handle adding/modifying certain HTTP headers
+
+                // Enter fetch state
+                SwitchState(handler, VclBackendAction.Fetch);
+                return Task.CompletedTask;
             }
         }
 
@@ -466,9 +491,84 @@ namespace Im.Proxy.VclCore
                     VclBackendAction.Fetch
                 };
 
-            public override void Execute(VclHandler handler, VclContext vclContext)
+            public override async Task ExecuteAsync(VclHandler handler, VclContext vclContext)
             {
+                var result = handler.VclBackendFetch(vclContext);
+                if (result != VclBackendAction.Fetch)
+                {
+                    SwitchState(handler, result);
+                    return;
+                }
 
+                // Issue request to backend
+                var httpClient = new HttpClient();
+                var backendRequest =
+                    new HttpRequestMessage
+                    {
+                        Method = new HttpMethod(vclContext.BackendRequest.Method),
+                        RequestUri = new Uri(vclContext.BackendRequest.Uri)
+                    };
+                foreach (var entry in vclContext.BackendRequest.Headers)
+                {
+                    backendRequest.Headers.Add(entry.Key, entry.Value);
+                }
+
+                // Get raw response from backend
+                var backendResponse = await httpClient
+                    .SendAsync(backendRequest)
+                    .ConfigureAwait(false);
+
+                // Setup VCL backend response
+                vclContext.BackendResponse =
+                    new VclBackendResponse
+                    {
+                        StatusCode = (int)backendResponse.StatusCode,
+                        StatusDescription = backendResponse.ReasonPhrase
+                    };
+                foreach (var item in backendResponse.Headers)
+                {
+                    vclContext.BackendResponse.Headers.Add(item.Key, string.Join(",", item.Value));
+                }
+
+                // Detect backend error
+                if (!backendResponse.IsSuccessStatusCode)
+                {
+                    SwitchState(handler, VclBackendAction.Error);
+                    return;
+                }
+
+                // If we have a content body in the response then copy it now
+                // TODO: May need to steal VirtualStream code that uses MemoryStream until content
+                //  exceeds certain size where it switches to a temporary file
+                if (backendResponse.Content != null)
+                {
+                    using (var contentBodyStream = await backendResponse.Content.ReadAsStreamAsync())
+                    {
+                        vclContext.BackendResponse.CopyBodyFrom(contentBodyStream);
+                    }
+                }
+
+                // Setup response TTL value
+                if (backendResponse.Headers.CacheControl.SharedMaxAge != null)
+                {
+                    vclContext.BackendResponse.Ttl = (int)backendResponse.Headers.CacheControl.SharedMaxAge.Value.TotalSeconds;
+                }
+                else if (backendResponse.Headers.CacheControl.MaxAge != null)
+                {
+                    vclContext.BackendResponse.Ttl = (int)backendResponse.Headers.CacheControl.MaxAge.Value.TotalSeconds;
+                }
+                else if (backendResponse.Headers.TryGetValues("Expires", out var expiryValues))
+                {
+                    var expiryDate = DateTime.Parse(expiryValues.First());
+                    vclContext.BackendResponse.Ttl = (int)(expiryDate - DateTime.UtcNow).TotalSeconds;
+                }
+                else
+                {
+                    vclContext.BackendResponse.Ttl = handler._defaultTtl;
+                }
+
+                // Switch state
+                SwitchState(handler, VclBackendAction.Response);
             }
         }
 
@@ -484,42 +584,11 @@ namespace Im.Proxy.VclCore
                     VclBackendAction.Retry
                 };
 
-            public override void Execute(VclHandler handler, VclContext vclContext)
+            public override Task ExecuteAsync(VclHandler handler, VclContext vclContext)
             {
-
-            }
-        }
-
-        private class VclRetryBackendHandlerState : VclBackendHandlerState
-        {
-            public override VclBackendAction State => VclBackendAction.Retry;
-
-            protected override VclBackendAction[] ValidTransitionStates =>
-                new[]
-                {
-                    VclBackendAction.Abandon,
-                    VclBackendAction.Fetch
-                };
-
-            public override void Execute(VclHandler handler, VclContext vclContext)
-            {
-
-            }
-        }
-
-        private class VclDeliverBackendHandlerState : VclBackendHandlerState
-        {
-            public override VclBackendAction State => VclBackendAction.Deliver;
-
-            protected override VclBackendAction[] ValidTransitionStates =>
-                new[]
-                {
-                    VclBackendAction.Done,
-                };
-
-            public override void Execute(VclHandler handler, VclContext vclContext)
-            {
-
+                var result = handler.VclBackendResponse(vclContext);
+                SwitchState(handler, result);
+                return Task.CompletedTask;
             }
         }
 
@@ -534,21 +603,33 @@ namespace Im.Proxy.VclCore
                     VclBackendAction.Retry
                 };
 
-            public override void Execute(VclHandler handler, VclContext vclContext)
+            public override Task ExecuteAsync(VclHandler handler, VclContext vclContext)
             {
-
+                return Task.CompletedTask;
             }
         }
 
-        private class VclDoneBackendHandlerState : VclBackendHandlerState
+        private class VclDeliverBackendHandlerState : VclBackendHandlerState
         {
-            public override VclBackendAction State => VclBackendAction.Done;
+            public override VclBackendAction State => VclBackendAction.Deliver;
 
             protected override VclBackendAction[] ValidTransitionStates => new VclBackendAction[0];
 
-            public override void Execute(VclHandler handler, VclContext vclContext)
+            public override Task ExecuteAsync(VclHandler handler, VclContext vclContext)
             {
+                return Task.CompletedTask;
+            }
+        }
 
+        private class VclAbandonBackendHandlerState : VclBackendHandlerState
+        {
+            public override VclBackendAction State => VclBackendAction.Abandon;
+
+            protected override VclBackendAction[] ValidTransitionStates => new VclBackendAction[0];
+
+            public override Task ExecuteAsync(VclHandler handler, VclContext vclContext)
+            {
+                return Task.CompletedTask;
             }
         }
 
@@ -557,13 +638,12 @@ namespace Im.Proxy.VclCore
             private static readonly Dictionary<VclBackendAction, VclBackendHandlerState> KnownStates =
                 new Dictionary<VclBackendAction, VclBackendHandlerState>
                 {
-                    { VclBackendAction.Abandon, new VclAbandonBackendHandlerState() },
+                    { VclBackendAction.Retry, new VclRetryBackendHandlerState() },
                     { VclBackendAction.Fetch, new VclFetchBackendHandlerState() },
                     { VclBackendAction.Response, new VclResponseBackendHandlerState() },
-                    { VclBackendAction.Retry, new VclRetryBackendHandlerState() },
-                    { VclBackendAction.Deliver, new VclDeliverBackendHandlerState() },
                     { VclBackendAction.Error, new VclErrorBackendHandlerState() },
-                    { VclBackendAction.Done, new VclDoneBackendHandlerState() }
+                    { VclBackendAction.Deliver, new VclDeliverBackendHandlerState() },
+                    { VclBackendAction.Abandon, new VclAbandonBackendHandlerState() }
                 };
 
             public static VclBackendHandlerState Get(VclBackendAction action)
@@ -600,104 +680,15 @@ namespace Im.Proxy.VclCore
 
         public virtual async Task<VclBackendAction> ProcessBackendFetchAsync(VclContext context)
         {
-            // Setup BE request parameters
-            context.BackendRequest =
-                new VclBackendRequest
-                {
-                    Method = context.Request.Method,
-                    Uri = context.Request.Url
-                };
-            foreach (var entry in context.Request.Headers)
+            _backendAttempt = -1;
+            _currentBackendState = VclBackendHandlerStateFactory.Get(VclBackendAction.Retry);
+            while (_currentBackendState.State != VclBackendAction.Abandon &&
+                   _currentBackendState.State != VclBackendAction.Deliver)
             {
-                context.BackendRequest.Headers.Add(entry.Key, entry.Value);
+                await _currentBackendState.ExecuteAsync(this, context).ConfigureAwait(false);
             }
 
-            // TODO: Handle translation of certain request METHOD values
-            // TODO: Handle filtering out certain HTTP headers
-            // TODO: Handle adding/modifying certain HTTP headers
-
-            // Allow hooks to issue modify backend fetch parameters
-            var result = VclBackendFetch(context);
-            if (result != VclBackendAction.Fetch)
-            {
-                return result;
-            }
-
-            // Issue request to backend
-            var httpClient = new HttpClient();
-            var backendRequest =
-                new HttpRequestMessage
-                {
-                    Method = new HttpMethod(context.BackendRequest.Method),
-                    RequestUri = new Uri(context.BackendRequest.Uri)
-                };
-            foreach (var entry in context.BackendRequest.Headers)
-            {
-                backendRequest.Headers.Add(entry.Key, entry.Value);
-            }
-
-            // Get raw response from backend
-            var backendResponse = await httpClient
-                .SendAsync(backendRequest)
-                .ConfigureAwait(false);
-
-            // Setup VCL backend response
-            context.BackendResponse = 
-                new VclBackendResponse
-                {
-                    StatusCode = (int)backendResponse.StatusCode,
-                    StatusDescription = backendResponse.ReasonPhrase
-                };
-            foreach (var item in backendResponse.Headers)
-            {
-                context.BackendResponse.Headers.Add(item.Key, string.Join(",", item.Value));
-            }
-
-            // Detect backend error
-            if (!backendResponse.IsSuccessStatusCode)
-            {
-                VclBackendError(context);
-                return VclBackendAction.Error;
-            }
-
-            // If we have a content body in the response then copy it now
-            // TODO: May need to steal VirtualStream code that uses MemoryStream until content
-            //  exceeds certain size where it switches to a temporary file
-            if (backendResponse.Content != null)
-            {
-                using (var contentBodyStream = await backendResponse.Content.ReadAsStreamAsync())
-                {
-                    context.BackendResponse.CopyBodyFrom(contentBodyStream);
-                }
-            }
-
-            // Setup response TTL value
-            if (backendResponse.Headers.CacheControl.SharedMaxAge != null)
-            {
-                context.BackendResponse.Ttl = (int)backendResponse.Headers.CacheControl.SharedMaxAge.Value.TotalSeconds;
-            }
-            else if (backendResponse.Headers.CacheControl.MaxAge != null)
-            {
-                context.BackendResponse.Ttl = (int)backendResponse.Headers.CacheControl.MaxAge.Value.TotalSeconds;
-            }
-            else if (backendResponse.Headers.TryGetValues("Expires", out var expiryValues))
-            {
-                var expiryDate = DateTime.Parse(expiryValues.First());
-                context.BackendResponse.Ttl = (int)(expiryDate - DateTime.UtcNow).TotalSeconds;
-            }
-            else
-            {
-                context.BackendResponse.Ttl = _defaultTtl;
-            }
-
-            // Pass control to vcl_backend_response method
-            result = VclBackendResponse(context);
-            if (result == VclBackendAction.Error)
-            {
-                VclBackendError(context);
-            }
-
-            return result;
+            return _currentBackendState.State;
         }
 
         public virtual void VclInit(VclContext context)
