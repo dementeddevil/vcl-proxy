@@ -98,7 +98,7 @@ namespace Im.Proxy.VclCore.Compiler
             var options =
                 new CompilerParameters
                 {
-
+                    OutputAssembly = outputAssembly
                 };
             var compileResults = CodeDomProvider
                 .CreateProvider("CSharp")
