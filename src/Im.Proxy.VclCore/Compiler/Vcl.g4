@@ -22,6 +22,7 @@ declaration
 	|	backendDeclaration
 	|	probeDeclaration
 	|	procedureDeclaration
+	|	aclDeclaration
 	;
 
 includeDeclaration
@@ -167,8 +168,7 @@ procedureDeclaration
 	;
 
 statement
-	:	expressionStatement
-	|	varStatement
+	:	varStatement
 	|	ifStatement
 	|	setStatement
 	|	removeStatement
@@ -176,7 +176,9 @@ statement
 	|	syntheticStatement
 	|	callStatement
 	|	returnStatement
+	|	restartStatement
 	|	compoundStatement
+	|	expressionStatement
 	;
 
 expressionStatement
@@ -218,6 +220,10 @@ hashDataStatement
 returnStatement
 	:	{InCustomFunction}? 'return' ';'
 	|	'return' '(' returnStateExpression ')' ';'
+	;
+
+restartStatement
+	:	'restart' ';'
 	;
 
 returnStateExpression
@@ -439,7 +445,7 @@ IdentifierHypen
 
 fragment
 IdentifierNonHyphen
-	:	IdentifierNondigit
+	:	Nondigit
     |   Digit
 	;
 
@@ -467,7 +473,7 @@ CharacterSequence
 
 fragment
 Char
-	:	~["\\\r\n]
+	:	~["\r\n]
 	|	HexEncoding
 	;
 

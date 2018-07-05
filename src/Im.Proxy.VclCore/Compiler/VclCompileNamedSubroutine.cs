@@ -270,6 +270,12 @@ namespace Im.Proxy.VclCore.Compiler
             return base.VisitCallStatement(context);
         }
 
+        public override CodeObject VisitRestartStatement(VclParser.RestartStatementContext context)
+        {
+            return new CodeMethodReturnStatement(
+                new CodePrimitiveExpression(VclAction.Restart));
+        }
+
         public override CodeObject VisitReturnStatement(VclParser.ReturnStatementContext context)
         {
             // If we have no return state then we must be in a custom function

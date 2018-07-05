@@ -199,7 +199,7 @@ namespace Im.Proxy.VclCore.UnitTests
             var outputAssembly = Path.Combine(testPath, "HitchedVclHandler.dll");
 
             // Act
-            new VclCompiler(Cache, FileProvider).CompileAndBuildModule("hitcheduat.vcl", outputAssembly);
+            new VclCompiler(Cache, FileProvider).CompileAndBuildModule("sub.vcl", outputAssembly);
 
             // Assert
         }
