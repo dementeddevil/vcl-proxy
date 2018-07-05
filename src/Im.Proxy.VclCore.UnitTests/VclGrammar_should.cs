@@ -195,17 +195,13 @@ namespace Im.Proxy.VclCore.UnitTests
         public void EvaluateHitchedUat()
         {
             // Arrange
-            var vclText = Encoding.UTF8.GetString(Resources.hitcheduat);
-            var visitor = new VclTestVisitor();
+            var testPath = Path.GetDirectoryName(typeof(VclGrammar_should).Assembly.Location);
+            var outputAssembly = Path.Combine(testPath, "HitchedVclHandler.dll");
 
             // Act
-            new VclCompiler(Cache, FileProvider).CompileAndVisit(vclText, visitor);
+            new VclCompiler(Cache, FileProvider).CompileAndBuildModule("hitcheduat.vcl", outputAssembly);
 
             // Assert
-            visitor.Operations.Should().BeEquivalentTo(
-                "",
-                "",
-                "");
         }
     }
 }

@@ -163,8 +163,10 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
-    <None Include="appsettings.json" />
-    <None Include="hitcheduat.vcl" />
+    <None Include="appsettings.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <EmbeddedResource Include="hitcheduat.vcl" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
