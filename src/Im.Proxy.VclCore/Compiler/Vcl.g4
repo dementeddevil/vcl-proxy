@@ -190,7 +190,7 @@ varStatement
 	;
 
 ifStatement
-	:	'if' '(' test=expression ')' ifTrue=statement (('elseif' | 'elsif' | 'elif') '(' otherTest=expression ')' otherTrue=statement)* ('else' elseStmt=statement)?
+	:	'if' '(' test=conditionalOrExpression ')' ifTrue=statement (('elseif' | 'elsif' | 'elif') '(' otherTest=expression ')' otherTrue=statement)* ('else' elseStmt=statement)?
 	;
 
 setStatement
