@@ -71,7 +71,7 @@ namespace Im.Proxy.VclCore.Compiler
             base.VisitBackendStringVariableExpression(context);
 
             var normalisedMemberName = context.name.GetText().Replace("_", "");
-            CompilerContext.InitStatements.Add(
+            CompilerContext.GetOrCreateSystemMethodStatements("vcl_init").Add(
                 new CodeAssignStatement(
                     new CodePropertyReferenceExpression(
                         _currentBackendReference,
@@ -86,7 +86,7 @@ namespace Im.Proxy.VclCore.Compiler
             base.VisitBackendIntegerVariableExpression(context);
 
             var normalisedMemberName = context.name.GetText().Replace("_", "");
-            CompilerContext.InitStatements.Add(
+            CompilerContext.GetOrCreateSystemMethodStatements("vcl_init").Add(
                 new CodeAssignStatement(
                     new CodePropertyReferenceExpression(
                         _currentBackendReference,
@@ -101,7 +101,7 @@ namespace Im.Proxy.VclCore.Compiler
             base.VisitBackendTimeVariableExpression(context);
 
             var normalisedMemberName = context.name.GetText().Replace("_", "");
-            CompilerContext.InitStatements.Add(
+            CompilerContext.GetOrCreateSystemMethodStatements("vcl_init").Add(
                 new CodeAssignStatement(
                     new CodePropertyReferenceExpression(
                         _currentBackendReference,
@@ -116,7 +116,7 @@ namespace Im.Proxy.VclCore.Compiler
             base.VisitBackendProbeVariableExpression(context);
 
             var normalisedMemberName = context.name.Text.Replace("_", "");
-            CompilerContext.InitStatements.Add(
+            CompilerContext.GetOrCreateSystemMethodStatements("vcl_init").Add(
                 new CodeAssignStatement(
                     new CodePropertyReferenceExpression(
                         CurrentProbeExpression,

@@ -163,8 +163,8 @@ aclIpAddressOrHost
 	;
 
 procedureDeclaration
-	:	'sub' name=VclIdentifier compoundStatement		{InCustomFunction = false;}
-	|	'sub' name=Identifier compoundStatement			{InCustomFunction = true;}
+	:	'sub' name=VclIdentifier compoundStatement		{InCustomFunction = false;}		# SystemProcedureDeclaration
+	|	'sub' name=Identifier compoundStatement			{InCustomFunction = true;}		# CustomProcedureDeclaration
 	;
 
 statement

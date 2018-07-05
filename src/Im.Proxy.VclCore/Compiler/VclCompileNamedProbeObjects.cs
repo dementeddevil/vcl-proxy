@@ -59,7 +59,7 @@ namespace Im.Proxy.VclCore.Compiler
             base.VisitProbeStringVariableExpression(context);
 
             var normalisedMemberName = context.name.GetText().Replace("_", "");
-            CompilerContext.InitStatements.Add(
+            CompilerContext.GetOrCreateSystemMethodStatements("vcl_init").Add(
                 new CodeAssignStatement(
                     new CodePropertyReferenceExpression(
                         CurrentProbeExpression,
@@ -74,7 +74,7 @@ namespace Im.Proxy.VclCore.Compiler
             base.VisitProbeIntegerVariableExpression(context);
 
             var normalisedMemberName = context.name.GetText().Replace("_", "");
-            CompilerContext.InitStatements.Add(
+            CompilerContext.GetOrCreateSystemMethodStatements("vcl_init").Add(
                 new CodeAssignStatement(
                     new CodePropertyReferenceExpression(
                         CurrentProbeExpression,
@@ -89,7 +89,7 @@ namespace Im.Proxy.VclCore.Compiler
             base.VisitProbeTimeVariableExpression(context);
 
             var normalisedMemberName = context.name.GetText().Replace("_", "");
-            CompilerContext.InitStatements.Add(
+            CompilerContext.GetOrCreateSystemMethodStatements("vcl_init").Add(
                 new CodeAssignStatement(
                     new CodePropertyReferenceExpression(
                         CurrentProbeExpression,

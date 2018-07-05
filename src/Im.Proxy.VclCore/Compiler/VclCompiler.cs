@@ -30,43 +30,26 @@ namespace Im.Proxy.VclCore.Compiler
             var compilerContext = Compile(filename);
 
             // Insert derived class methods
-            foreach (var method in compilerContext.MethodStatements)
+            foreach (var method in compilerContext.MethodDefinitions)
             {
-                var methodName = method.Key;
                 var systemMethodName = SystemFunctionToMethodInfoFactory
                     .GetSystemMethodName(method.Key);
-
-                // Create code method
-                var codeMethod =
-                    new CodeMemberMethod
-                    {
-                        Attributes = MemberAttributes.Public,
-                        ReturnType = new CodeTypeReference(typeof(VclAction))
-                    };
-                codeMethod.Statements.AddRange(method.Value);
 
                 // System method overrides need a slightly different definition
                 if (!string.IsNullOrWhiteSpace(systemMethodName))
                 {
-                    codeMethod.Name = systemMethodName;
-                    codeMethod.Statements.Add(
+                    method.Value.Statements.Add(
                         new CodeMethodReturnStatement(
                             new CodeMethodInvokeExpression(
                                 new CodeBaseReferenceExpression(),
                                 systemMethodName)));
-
-                    // ReSharper disable once BitwiseOperatorOnEnumWithoutFlags
-                    codeMethod.Attributes |= MemberAttributes.Override;
                 }
                 else
                 {
-                    codeMethod.Name = methodName;
-                    codeMethod.Statements.Add(
+                    method.Value.Statements.Add(
                         new CodeMethodReturnStatement(
                             new CodePrimitiveExpression(VclAction.NoOp)));
                 }
-
-                compilerContext.HandlerClass.Members.Add(codeMethod);
             }
 
             // Create namespace Im.Proxy.Handlers

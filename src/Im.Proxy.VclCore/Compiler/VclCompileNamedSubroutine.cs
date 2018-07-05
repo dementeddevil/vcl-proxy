@@ -202,20 +202,21 @@ namespace Im.Proxy.VclCore.Compiler
         {
         }
 
-        public override CodeObject VisitProcedureDeclaration(VclParser.ProcedureDeclarationContext context)
+        public override CodeObject VisitSystemProcedureDeclaration(VclParser.SystemProcedureDeclarationContext context)
         {
             // Get or create method body expression
             var name = context.name.Text;
-            if (!CompilerContext.MethodStatements.TryGetValue(name, out var entry))
-            {
-                entry = new CodeStatementCollection();
-                CompilerContext.MethodStatements.Add(name, entry);
-            }
+            CompilerContext.GetOrCreateSystemMethodStatements(name)
+                .Add((CodeStatement)VisitCompoundStatement(context.compoundStatement()));
+            return null;
+        }
 
-            // Build method body
-            var bodyExpression = VisitCompoundStatement(context.compoundStatement());
-            entry.Add((CodeStatement)bodyExpression);
-
+        public override CodeObject VisitCustomProcedureDeclaration(VclParser.CustomProcedureDeclarationContext context)
+        {
+            // Create method body expression
+            var name = context.name.Text;
+            CompilerContext.CreateCustomMethodStatements(name)
+                .Add((CodeStatement)VisitCompoundStatement(context.compoundStatement()));
             return null;
         }
 
