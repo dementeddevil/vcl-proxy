@@ -423,35 +423,35 @@ namespace Im.Proxy.VclCore.Compiler
             if (context.otherTest.IsEmpty && context.elseStmt.IsEmpty)
             {
                 return new CodeConditionStatement(
-                    (CodeExpression)VisitExpression(context.test),
+                    (CodeExpression)VisitConditionalOrExpression(context.test),
                     (CodeStatement)VisitStatement(context.ifTrue));
             }
 
             if (context.otherTest.IsEmpty)
             {
                 return new CodeConditionStatement(
-                    (CodeExpression)VisitExpression(context.test),
+                    (CodeExpression)VisitConditionalOrExpression(context.test),
                     (CodeStatement)VisitStatement(context.ifTrue),
                     (CodeStatement)VisitStatement(context.elseStmt));
             }
 
             return new CodeConditionStatement(
-                (CodeExpression)VisitExpression(context.test),
+                (CodeExpression)VisitConditionalOrExpression(context.test),
                 new[]
                 {
-                    (CodeStatement) VisitStatement(context.ifTrue),
+                    (CodeStatement)VisitStatement(context.ifTrue),
                 },
                 new[]
                 {
                     (CodeStatement) new CodeConditionStatement(
-                        (CodeExpression) VisitExpression(context.otherTest),
+                        (CodeExpression)VisitConditionalOrExpression(context.otherTest),
                         new[]
                         {
-                            (CodeStatement) VisitStatement(context.otherTrue)
+                            (CodeStatement)VisitStatement(context.otherTrue)
                         },
                         new[]
                         {
-                            (CodeStatement) VisitStatement(context.elseStmt)
+                            (CodeStatement)VisitStatement(context.elseStmt)
                         })
                 });
         }

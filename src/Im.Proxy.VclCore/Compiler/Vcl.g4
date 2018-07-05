@@ -190,7 +190,7 @@ varStatement
 	;
 
 ifStatement
-	:	'if' '(' test=conditionalOrExpression ')' ifTrue=statement (('elseif' | 'elsif' | 'elif') '(' otherTest=expression ')' otherTrue=statement)* ('else' elseStmt=statement)?
+	:	'if' '(' test=conditionalOrExpression ')' ifTrue=statement (('elseif' | 'elsif' | 'elif') '(' otherTest=conditionalOrExpression ')' otherTrue=statement)* ('else' elseStmt=statement)?
 	;
 
 setStatement
@@ -364,11 +364,11 @@ memberAccessExpression
 	;
 
 literalExpression
-	:	stringLiteral
+	:	booleanLiteral
+	|	timeLiteral
+	|	stringLiteral
 	|	synthenticLiteral
 	|	integerLiteral
-	|	timeLiteral
-	|	booleanLiteral
 	;
 
 regularExpression
@@ -404,11 +404,11 @@ booleanLiteral
  */
 
 VclIdentifier
-	:	'vcl_' IdentifierNondigit IdentifierHypen*
+	:	'vcl_' IdentifierNondigit IdentifierAny*
 	;
 
 Identifier
-    :   IdentifierNondigit IdentifierHypen*
+    :   IdentifierNondigit IdentifierAny*
     ;
 
 IntegerConstant
@@ -438,13 +438,7 @@ IdentifierNondigit
     ;
 
 fragment
-IdentifierHypen
-	:	IdentifierNonHyphen
-	|	Hyphen IdentifierNonHyphen
-	;
-
-fragment
-IdentifierNonHyphen
+IdentifierAny
 	:	Nondigit
     |   Digit
 	;
@@ -479,7 +473,7 @@ Char
 
 fragment
 Nondigit
-    :   [a-zA-Z_]
+    :   [a-zA-Z_\-]
     ;
 
 fragment
