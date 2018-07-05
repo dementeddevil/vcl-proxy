@@ -1,10 +1,17 @@
 ﻿using System;
+using System.IO;
 using System.Linq.Expressions;
 using System.Text;
 using FluentAssertions;
 using Im.Proxy.VclCore.Compiler;
 using Im.Proxy.VclCore.Model;
 using Im.Proxy.VclCore.UnitTests.Properties;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Im.Proxy.VclCore.UnitTests
@@ -90,6 +97,31 @@ namespace Im.Proxy.VclCore.UnitTests
                 }
             };
         }
+
+        public VclGrammar_should()
+        {
+            var builder = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json");
+            Configuration = builder.Build();
+
+            var services = new ServiceCollection();
+            services
+                .AddMemoryCache()
+                .AddLogging()
+                .AddSingleton<IFileProvider>(new EmbeddedFileProvider(typeof(VclGrammar_should).Assembly));
+            ServiceProvider = services.BuildServiceProvider();
+        }
+
+        public IConfiguration Configuration { get; }
+
+        public IServiceProvider ServiceProvider { get; }
+
+        public IMemoryCache Cache => ServiceProvider.GetService<IMemoryCache>();
+
+        public IFileProvider FileProvider => ServiceProvider.GetService<IFileProvider>();
+
+        public ILogger Logger => ServiceProvider.GetService<ILogger>();
 
         [Theory]
         [MemberData(nameof(IncludeTestData))]
