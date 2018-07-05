@@ -7,17 +7,18 @@ using System.Linq;
 using Antlr4.Runtime;
 using Im.Proxy.VclCore.Model;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.FileProviders;
 
 namespace Im.Proxy.VclCore.Compiler
 {
     public class VclCompiler
     {
         private readonly IMemoryCache _memCache;
-        private readonly IVclTextFileProvider _fileProvider;
+        private readonly IFileProvider _fileProvider;
 
         public VclCompiler(
             IMemoryCache memCache,
-            IVclTextFileProvider fileProvider)
+            IFileProvider fileProvider)
         {
             _memCache = memCache;
             _fileProvider = fileProvider;
@@ -123,20 +124,28 @@ namespace Im.Proxy.VclCore.Compiler
 
                 // Add to list of seen files and get file content
                 seenFiles.Add(filename);
-                var vclContent = _fileProvider.GetFileContent(filename);
-
-                // Process include directives
-                var includeDirectiveCompiler = new VclCompileIncludes();
-                CompileAndVisit(vclContent, includeDirectiveCompiler);
-
-                // Queue any include directives we have found
-                foreach (var include in includeDirectiveCompiler.Files)
+                var fileInfo = _fileProvider.GetFileInfo(filename);
+                using (var fileStream = fileInfo.CreateReadStream())
                 {
-                    filenameQueue.Enqueue(include);
-                }
+                    using (var reader = new StreamReader(fileStream))
+                    {
+                        // Read file content from reader
+                        var vclContent = reader.ReadToEnd();
 
-                // Process all other content
-                CompileFileContent(vclContent, compilerContext);
+                        // Process include directives
+                        var includeDirectiveCompiler = new VclCompileIncludes();
+                        CompileAndVisit(vclContent, includeDirectiveCompiler);
+
+                        // Queue any include directives we have found
+                        foreach (var include in includeDirectiveCompiler.Files)
+                        {
+                            filenameQueue.Enqueue(include);
+                        }
+
+                        // Process all other content
+                        CompileFileContent(vclContent, compilerContext);
+                    }
+                }
             }
         }
 

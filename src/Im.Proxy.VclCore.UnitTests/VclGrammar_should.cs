@@ -131,7 +131,7 @@ namespace Im.Proxy.VclCore.UnitTests
             var visitor = new VclTestVisitor();
 
             // Act
-            new VclCompiler(null, null).CompileAndVisit(vclText, visitor);
+            new VclCompiler(Cache, FileProvider).CompileAndVisit(vclText, visitor);
 
             // Assert
             visitor.Operations.Should().BeEquivalentTo(expectedOperations);
@@ -145,7 +145,7 @@ namespace Im.Proxy.VclCore.UnitTests
             var visitor = new VclTestVisitor();
 
             // Act
-            new VclCompiler(null, null).CompileAndVisit(vclText, visitor);
+            new VclCompiler(Cache, FileProvider).CompileAndVisit(vclText, visitor);
 
             // Assert
             visitor.Operations.Should().BeEquivalentTo(expectedOperations);
@@ -170,7 +170,7 @@ namespace Im.Proxy.VclCore.UnitTests
             var visitor = new VclCompileNamedProbeObjects(context);
 
             // Act
-            new VclCompiler(null, null).CompileAndVisit(vclText, visitor);
+            new VclCompiler(Cache, FileProvider).CompileAndVisit(vclText, visitor);
 
             // Assert
             Assert.True(context.ProbeReferences.ContainsKey("myprobe"));
@@ -199,7 +199,7 @@ namespace Im.Proxy.VclCore.UnitTests
             var visitor = new VclTestVisitor();
 
             // Act
-            new VclCompiler(null, null).CompileAndVisit(vclText, visitor);
+            new VclCompiler(Cache, FileProvider).CompileAndVisit(vclText, visitor);
 
             // Assert
             visitor.Operations.Should().BeEquivalentTo(
