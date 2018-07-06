@@ -356,7 +356,7 @@ namespace Im.Proxy.VclCore.Compiler
 
         public override CodeObject VisitVarStatement(VclParser.VarStatementContext context)
         {
-            var name = context.name.Text;
+            var name = context.name.Text.Substring(4).SafeIdentifier("local");
 
             // Variable cannot already be declared in this scope or any parent scope
             foreach (var scope in _currentCompoundStatementVariables)

@@ -16,26 +16,26 @@ namespace Im.Proxy.VclCore.Compiler
         public override CodeObject VisitStringLiteral(VclParser.StringLiteralContext context)
         {
             base.VisitStringLiteral(context);
-            return new CodePrimitiveExpression(context.StringConstant().GetText().Trim('"'));
+            return new CodePrimitiveExpression(context.value.Text.Trim('"'));
         }
 
         public override CodeObject VisitSynthenticLiteral([NotNull] VclParser.SynthenticLiteralContext context)
         {
             base.VisitSynthenticLiteral(context);
-            return new CodePrimitiveExpression(context.SyntheticString().GetText().Trim('"', '{', '}'));
+            return new CodePrimitiveExpression(context.value.Text.Trim('"', '{', '}'));
         }
 
         public override CodeObject VisitIntegerLiteral(VclParser.IntegerLiteralContext context)
         {
             base.VisitIntegerLiteral(context);
-            return new CodePrimitiveExpression(int.Parse(context.IntegerConstant().GetText()));
+            return new CodePrimitiveExpression(int.Parse(context.value.Text));
         }
 
         public override CodeObject VisitTimeLiteral(VclParser.TimeLiteralContext context)
         {
             base.VisitTimeLiteral(context);
-            var rawValue = context.TimeConstant().GetText();
-            var value = TimeSpan.Zero;
+            var rawValue = context.value.Text;
+            TimeSpan value;
             if (rawValue.EndsWith("ms"))
             {
                 var timeComponentText = rawValue.Substring(0, rawValue.Length - 2);
@@ -43,23 +43,24 @@ namespace Im.Proxy.VclCore.Compiler
             }
             else
             {
-                var timeComponentText = rawValue.Substring(0, rawValue.Length - 1);
+                var timeComponent = int.Parse(rawValue.Substring(0, rawValue.Length - 1));
                 switch (rawValue.Substring(rawValue.Length - 1, 1).ToLower())
                 {
                     case "s":
-                        value = TimeSpan.FromSeconds(int.Parse(timeComponentText));
+                        value = TimeSpan.FromSeconds(timeComponent);
                         break;
                     case "m":
-                        value = TimeSpan.FromMinutes(int.Parse(timeComponentText));
+                        value = TimeSpan.FromMinutes(timeComponent);
                         break;
                     case "d":
-                        value = TimeSpan.FromDays(int.Parse(timeComponentText));
+                        value = TimeSpan.FromDays(timeComponent);
                         break;
                     case "w":
-                        value = TimeSpan.FromDays(7 * int.Parse(timeComponentText));
+                        value = TimeSpan.FromDays(7 * timeComponent);
                         break;
                     case "y":
-                        value = TimeSpan.FromDays(365 * int.Parse(timeComponentText));
+                        var refTimeStamp = DateTime.UtcNow;
+                        value = refTimeStamp.AddYears(timeComponent) - refTimeStamp;
                         break;
                     default:
                         throw new InvalidOperationException("Unable to parse time component");
@@ -72,7 +73,7 @@ namespace Im.Proxy.VclCore.Compiler
         public override CodeObject VisitBooleanLiteral(VclParser.BooleanLiteralContext context)
         {
             base.VisitBooleanLiteral(context);
-            return new CodePrimitiveExpression(bool.Parse(context.GetText()));
+            return new CodePrimitiveExpression(bool.Parse(context.value.Text));
         }
     }
 }

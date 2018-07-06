@@ -186,7 +186,7 @@ expressionStatement
 	;
 
 varStatement
-	:	'declare' 'local' 'var.' name=Identifier type=('BOOL' | 'INTEGER' | 'FLOAT' | 'TIME' | 'RTIME' | 'STRING') ';'
+	:	'declare' 'local' name=VarIdentifier type=('BOOL' | 'INTEGER' | 'FLOAT' | 'TIME' | 'RTIME' | 'STRING') ';'
 	;
 
 ifStatement
@@ -372,36 +372,40 @@ literalExpression
 	;
 
 regularExpression
-	:	StringConstant
+	:	value=StringConstant
 	;
 
 aclReferenceExpression
-	:	name=Identifier
+	:	value=Identifier
 	;
 
 stringLiteral
-	:	StringConstant
+	:	value=StringConstant
 	;
 
 synthenticLiteral
-	:	SyntheticString
+	:	value=SyntheticString
 	;
 
 integerLiteral
-	:	IntegerConstant
+	:	value=IntegerConstant
 	;
 
 timeLiteral
-	:	TimeConstant
+	:	value=TimeConstant
 	;
 
 booleanLiteral
-	:	BooleanConstant
+	:	value=BooleanConstant
 	;
 
 /*
  * Lexer Rules
  */
+
+VarIdentifier
+	:	'var.' IdentifierNondigit IdentifierAny*
+	;
 
 VclIdentifier
 	:	'vcl_' IdentifierNondigit IdentifierAny*

@@ -10,10 +10,10 @@ backend F_Identity {
 
 sub vcl_recv {
   if (req.http.FastlyFF) {
-    set req.max_stale_while_revalidate = 0s;
+    set req.maxstalewhilerevalidate = 0s;
   }
 
-  set req.http.X-Backend = req.backend;
+  set req.http.XBackend = req.backend;
 
   if (req.request != "HEAD" && req.request != "GET" && req.request != "FASTLYPURGE") {
     return(pass);
