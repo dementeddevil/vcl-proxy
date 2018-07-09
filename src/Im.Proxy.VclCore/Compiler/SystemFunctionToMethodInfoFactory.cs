@@ -20,6 +20,7 @@ namespace Im.Proxy.VclCore.Compiler
                 { "vcl_purge", nameof(VclHandler.VclPurge) },
                 { "vcl_synth", nameof(VclHandler.VclSynth) },
                 { "vcl_error", nameof(VclHandler.VclError) },
+                { "vcl_log", nameof(VclHandler.VclLog) },
                 { "vcl_backend_fetch", nameof(VclHandler.VclBackendFetch) },
                 { "vcl_backend_response", nameof(VclHandler.VclBackendResponse) },
                 { "vcl_backend_error", nameof(VclHandler.VclBackendError) },

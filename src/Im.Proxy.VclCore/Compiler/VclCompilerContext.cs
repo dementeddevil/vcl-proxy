@@ -76,7 +76,7 @@ to: https://book.varnish-software.com/4.0/
                     Name = systemMethodName,
                     // ReSharper disable once BitwiseOperatorOnEnumWithoutFlags
                     Attributes = MemberAttributes.Public | MemberAttributes.Override,
-                    ReturnType = new CodeTypeReference(typeof(VclAction))
+                    ReturnType = new CodeTypeReference(typeof(VclFrontendAction))
                 };
         }
 
@@ -88,7 +88,7 @@ to: https://book.varnish-software.com/4.0/
                 {
                     Name = methodName.SafeIdentifier(),
                     Attributes = MemberAttributes.Public,
-                    ReturnType = new CodeTypeReference(typeof(VclAction))
+                    ReturnType = new CodeTypeReference(typeof(VclFrontendAction))
                 };
         }
     }

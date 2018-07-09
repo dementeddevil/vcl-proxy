@@ -48,7 +48,7 @@ namespace Im.Proxy.VclCore.Compiler
                 {
                     method.Value.Statements.Add(
                         new CodeMethodReturnStatement(
-                            new CodePrimitiveExpression(VclAction.NoOp)));
+                            new CodePrimitiveExpression(VclFrontendAction.NoOp)));
                 }
             }
 

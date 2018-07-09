@@ -194,8 +194,6 @@ namespace Im.Proxy.VclCore.Compiler
             new Stack<IDictionary<string, CodeVariableReferenceExpression>>();
 
         private int _unnamedVariableIndex;
-        private int _memberAccessDepth;
-        private CodeExpression _currentMemberAccessExpression;
 
         public VclCompileNamedSubroutine(VclCompilerContext compilerContext)
             : base(compilerContext)
@@ -246,7 +244,7 @@ namespace Im.Proxy.VclCore.Compiler
             var localVariableName = GetUniqueLocalVariableName();
             _currentCompoundStatementExpressions.Peek()
                 .TrueStatements.Add(new CodeVariableDeclarationStatement(
-                    typeof(VclAction), localVariableName));
+                    typeof(VclFrontendAction), localVariableName));
             var localVariableReference = new CodeVariableReferenceExpression(localVariableName);
 
             _currentCompoundStatementExpressions.Peek()
@@ -264,7 +262,7 @@ namespace Im.Proxy.VclCore.Compiler
                             new CodeBinaryOperatorExpression(
                                 localVariableReference,
                                 CodeBinaryOperatorType.IdentityInequality,
-                                new CodePrimitiveExpression(VclAction.NoOp)),
+                                new CodePrimitiveExpression(VclFrontendAction.NoOp)),
                             new CodeMethodReturnStatement(localVariableReference))
                     });
 
@@ -274,7 +272,7 @@ namespace Im.Proxy.VclCore.Compiler
         public override CodeObject VisitRestartStatement(VclParser.RestartStatementContext context)
         {
             return new CodeMethodReturnStatement(
-                new CodePrimitiveExpression(VclAction.Restart));
+                new CodePrimitiveExpression(VclFrontendAction.Restart));
         }
 
         public override CodeObject VisitReturnStatement(VclParser.ReturnStatementContext context)
@@ -284,7 +282,7 @@ namespace Im.Proxy.VclCore.Compiler
             {
                 // What we actually return here is VclAction.NoOp
                 return new CodeMethodReturnStatement(
-                    new CodePrimitiveExpression(VclAction.NoOp));
+                    new CodePrimitiveExpression(VclFrontendAction.NoOp));
             }
 
             // Otherwise call through base class
@@ -297,7 +295,7 @@ namespace Im.Proxy.VclCore.Compiler
 
             var action = context.GetText().Replace("-", string.Empty);
             return new CodeMethodReturnStatement(
-                new CodePrimitiveExpression(Enum.Parse(typeof(VclAction), action, true)));
+                new CodePrimitiveExpression(Enum.Parse(typeof(VclFrontendAction), action, true)));
         }
 
         public override CodeObject VisitComplexReturnStateExpression(VclParser.ComplexReturnStateExpressionContext context)
@@ -512,7 +510,7 @@ namespace Im.Proxy.VclCore.Compiler
                         new CodePrimitiveExpression(statusDescription)),
                 });
             return new CodeMethodReturnStatement(
-                new CodePrimitiveExpression(VclAction.DeliverContent));
+                new CodePrimitiveExpression(VclFrontendAction.DeliverContent));
         }
 
         public override CodeObject VisitExpressionStatement(VclParser.ExpressionStatementContext context)
@@ -871,89 +869,44 @@ namespace Im.Proxy.VclCore.Compiler
                 new CodePrimitiveExpression(false)).SetExpressionType(typeof(bool));
         }
 
-        public override CodeObject VisitMemberAccessExpression(VclParser.MemberAccessExpressionContext context)
+        public override CodeObject VisitAccessMemberHttp(VclParser.AccessMemberHttpContext context)
         {
-            if (_memberAccessDepth == 0)
+            if (!_contextObjectMapper.TryGetExpression(
+                new CodeArgumentReferenceExpression("context"),
+                context.obj.GetText(),
+                "http",
+                out var expression))
             {
-                var identifier = context.lhs.Text;
-                var memberName = context.rhs.Text;
-
-                // Lookup based on date
-                if (identifier == "now" && memberName == null)
-                {
-                    return new CodeMethodInvokeExpression(
-                        new CodeTypeReferenceExpression(typeof(VclGlobalFunctions)),
-                        nameof(VclGlobalFunctions.Now))
-                        .SetExpressionType(typeof(DateTime));
-                }
-
-                // If identifier is "var" then walk local scope variables
-                if (identifier.Equals("var", StringComparison.OrdinalIgnoreCase))
-                {
-                    foreach (var scope in _currentCompoundStatementVariables)
-                    {
-                        if (scope.TryGetValue(memberName, out var variable))
-                        {
-                            return variable;
-                        }
-                    }
-
-                    // If we get to this point then the variable has not been found
-                    throw new ArgumentException("Undefined variable encountered");
-                }
-
-                // Finally attempt to perform lookup for context variables
-                if (!_contextObjectMapper.TryGetExpression(
-                    new CodeArgumentReferenceExpression("context"),
-                    identifier,
-                    memberName,
-                    out var expression))
-                {
-                    throw new ArgumentException("Unable to determine top-level object");
-                }
-
-                _currentMemberAccessExpression = expression;
-                return expression;
+                throw new ArgumentException("Unable to determine top-level object");
             }
 
-            var rhsIdentifier = context.rhs.Text;
+            return new CodeIndexerExpression(
+                    expression,
+                    new CodePrimitiveExpression(context.header))
+                .SetExpressionType(typeof(string));
+        }
 
-            // Combine the current access expression with the right-hand-side
-            // Special case for dictionary on LHS
-            if (_currentMemberAccessExpression.GetExpressionType() == typeof(IDictionary<string, string>))
+        public override CodeObject VisitAccessMemberNormal(VclParser.AccessMemberNormalContext context)
+        {
+            if (!_contextObjectMapper.TryGetExpression(
+                new CodeArgumentReferenceExpression("context"),
+                context.obj.GetText(),
+                context.name.Text,
+                out var expression))
             {
-                _currentMemberAccessExpression =
-                    new CodeIndexerExpression(
-                        _currentMemberAccessExpression,
-                        new CodePrimitiveExpression(rhsIdentifier))
-                        .SetExpressionType(typeof(string));
-            }
-            else
-            {
-                var type = _currentMemberAccessExpression
-                    .GetExpressionType()
-                    .GetProperty(
-                        rhsIdentifier,
-                        BindingFlags.Public |
-                        BindingFlags.IgnoreCase)
-                    .PropertyType;
-                _currentMemberAccessExpression =
-                    new CodePropertyReferenceExpression(
-                        _currentMemberAccessExpression, rhsIdentifier)
-                        .SetExpressionType(type);
+                throw new ArgumentException("Unable to determine top-level object");
             }
 
-            ++_memberAccessDepth;
-            try
-            {
-                base.VisitMemberAccessExpression(context);
-            }
-            finally
-            {
-                --_memberAccessDepth;
-            }
-
-            return _currentMemberAccessExpression;
+            var type = expression
+                .GetExpressionType()
+                .GetProperty(
+                    context.name.Text,
+                    BindingFlags.Public |
+                    BindingFlags.IgnoreCase)
+                .PropertyType;
+            return new CodePropertyReferenceExpression(
+                    expression, context.name.Text)
+                .SetExpressionType(type);
         }
 
         private CodeExpression ConvertExpression(CodeExpression expr, Type targetType)

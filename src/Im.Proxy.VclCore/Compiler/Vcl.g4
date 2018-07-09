@@ -190,7 +190,7 @@ varStatement
 	;
 
 ifStatement
-	:	'if' '(' test=conditionalOrExpression ')' ifTrue=statement (('elseif' | 'elsif' | 'elif') '(' otherTest=conditionalOrExpression ')' otherTrue=statement)* ('else' elseStmt=statement)?
+	:	If '(' test=conditionalOrExpression ')' ifTrue=statement (('elseif' | 'elsif' | 'elif') '(' otherTest=conditionalOrExpression ')' otherTrue=statement)* ('else' elseStmt=statement)?
 	;
 
 setStatement
@@ -290,7 +290,7 @@ assignmentOperator
 	;
 
 conditionalExpression
-	:	'if' '(' conditionalOrExpression ',' ifTrue=expression ',' ifFalse=expression ')'
+	:	If '(' conditionalOrExpression ',' ifTrue=expression ',' ifFalse=expression ')'
 	;
 
 conditionalOrExpression
@@ -344,7 +344,8 @@ primaryExpression
 	;
 
 globalFunctionExpression
-	:	'boltsort.sort' '(' url=stringLiteral ')'															# GlobalUrlSort
+	:	'now'																								# GlobalNow
+	|	'boltsort.sort' '(' url=stringLiteral ')'															# GlobalUrlSort
 	|	'cstr_escape' '(' cstr=stringLiteral ')'															# GlobalStringEscape
 	|	'http_status_when' '(' statusCode=integerLiteral ',' commaSeparatedStatusCodes=stringLiteral ')'	# GlobalHttpStatusWhen
 	|	'std.atoi' '(' text=stringLiteral ')'																# GlobalAtoI
@@ -360,7 +361,24 @@ globalFunctionExpression
 	;
 
 memberAccessExpression
-	:	lhs=Identifier ('.' rhs=Identifier)*
+	:	obj=contextTransferObjects '.' 'http' '.' header=IdentifierWithHyphen								# AccessMemberHttp
+	|	obj=contextAllObjects '.' name=Identifier															# AccessMemberNormal
+	;
+
+contextTransferObjects
+	:	Request
+	|	Response
+	|	BackendRequest
+	|	BackendResponse
+	;
+
+contextAllObjects
+	:	contextTransferObjects
+	|	Client
+	|	Server
+	|	Local
+	|	Remote
+	|	Var
 	;
 
 literalExpression
@@ -415,6 +433,10 @@ Identifier
     :   IdentifierNondigit IdentifierAny*
     ;
 
+IdentifierWithHyphen
+	:   IdentifierNondigit IdentifierAnyWithHyphen*
+    ;
+
 IntegerConstant
 	:	Digit+
 	;
@@ -436,6 +458,46 @@ AclExclude
 	:	'!'
 	;
 
+If
+	:	'if'
+	;
+
+Request
+	:	'req'
+	;
+
+Response
+	:	'resp'
+	;
+
+BackendRequest
+	:	'bereq'
+	;
+
+BackendResponse
+	:	'beresp'
+	;
+
+Client
+	:	'client'
+	;
+
+Server
+	:	'server'
+	;
+
+Local
+	:	'local'
+	;
+
+Remote
+	:	'remote'
+	;
+
+Var
+	:	'var'
+	;
+
 fragment
 IdentifierNondigit
     :   Nondigit
@@ -445,6 +507,13 @@ fragment
 IdentifierAny
 	:	Nondigit
     |   Digit
+	;
+
+fragment
+IdentifierAnyWithHyphen
+	:	Nondigit
+	|	Digit
+	|	Hyphen
 	;
 
 HexEncoding
@@ -477,7 +546,7 @@ Char
 
 fragment
 Nondigit
-    :   [a-zA-Z_\-]
+    :   [a-zA-Z_]
     ;
 
 fragment
