@@ -26,11 +26,11 @@ declaration
 	;
 
 includeDeclaration
-	:	'include' StringConstant ';'
+	:	Include StringConstant Semi
 	;
 
 backendDeclaration
-	:	'backend' Identifier '{' backendElementList '}'
+	:	Backend Identifier LBrace backendElementList RBrace
 	;
 
 backendElementList
@@ -39,47 +39,47 @@ backendElementList
 	;
 
 backendElement
-	:	'.' backendVariableExpression
+	:	Dot backendVariableExpression
 	;
 
 backendVariableExpression
-	:	backendStringVariableExpression  ';'
-	|	backendIntegerVariableExpression ';'
-	|	backendTimeVariableExpression ';'
+	:	backendStringVariableExpression Semi
+	|	backendIntegerVariableExpression Semi
+	|	backendTimeVariableExpression Semi
 	|	backendProbeVariableExpression
 	;
 
 backendStringVariableExpression
-	:	name=backendStringVariableName '=' value=stringLiteral
+	:	name=backendStringVariableName Equal value=stringLiteral
 	;
 
 backendIntegerVariableExpression
-	:	name=backendIntegerVariableName '=' value=integerLiteral
+	:	name=backendIntegerVariableName Equal value=integerLiteral
 	;
 
 backendTimeVariableExpression
-	:	name=backendTimeVariableName '=' value=timeLiteral
+	:	name=backendTimeVariableName Equal value=timeLiteral
 	;
 
 backendProbeVariableExpression
-	:	name='probe' '=' value=probeExpression
+	:	name=Probe Equal value=probeExpression
 	;
 
 backendStringVariableName
-	:	'host'
-	|	'port'
-	|	'host_header'
-	|	'proxy_header'
+	:	Host
+	|	Port
+	|	HostHeader
+	|	ProxyHeader
 	;
 
 backendIntegerVariableName
-	:	'max_connections'
+	:	MaxConnections
 	;
 
 backendTimeVariableName
-	:	'connect_timeout'
-	|	'first_byte_timeout'
-	|	'between_bytes_timeout'
+	:	ConnectionTimeout
+	|	FirstByteTimeout
+	|	BetweenBytesTimeout
 	;
 
 probeExpression
@@ -88,15 +88,15 @@ probeExpression
 	;
 
 probeReferenceExpression
-	:	probeName=Identifier ';'
+	:	probeName=Identifier Semi
 	;
 
 probeDeclaration
-	:	'probe' Identifier probeInlineExpression
+	:	Probe Identifier probeInlineExpression
 	;
 
 probeInlineExpression
-	:	'{' probeElementList '}'
+	:	LBrace probeElementList RBrace
 	;
 
 probeElementList
@@ -105,7 +105,7 @@ probeElementList
 	;
 
 probeElement
-	:	'.' probeVariableExpression ';'
+	:	Dot probeVariableExpression Semi
 	;
 
 probeVariableExpression
@@ -115,35 +115,35 @@ probeVariableExpression
 	;
 
 probeStringVariableExpression
-	:	name=probeStringVariableName '=' value=stringLiteral
+	:	name=probeStringVariableName Equal value=stringLiteral
 	;
 
 probeIntegerVariableExpression
-	:	name=probeIntegerVariableName '=' value=integerLiteral
+	:	name=probeIntegerVariableName Equal value=integerLiteral
 	;
 
 probeTimeVariableExpression
-	:	name=probeTimeVariableName '=' value=timeLiteral
+	:	name=probeTimeVariableName Equal value=timeLiteral
 	;
 
 probeStringVariableName
-	:	'url'
+	:	Url
 	;
 
 probeTimeVariableName
-	:	'timeout'
-	|	'interval'
+	:	Timeout
+	|	Interval
 	;
 
 probeIntegerVariableName
-	:	'expected_response'
-	|	'initial'
-	|	'window'
-	|	'threshold'
+	:	ExpectedResponse
+	|	Initial
+	|	Window
+	|	Threshold
 	;
 
 aclDeclaration
-	:	'acl' name=Identifier '{' aclElementList '}'
+	:	Acl name=Identifier LBrace aclElementList RBrace
 	;
 
 aclElementList
@@ -152,19 +152,19 @@ aclElementList
 	;
 
 aclElement
-	:	exclude=AclExclude? aclIpAddressOrHost
+	:	exclude=Exclaim? aclIpAddressOrHost
 	;
 
 aclIpAddressOrHost
-	:	host=StringConstant				# AclEntryNonIgnorableHost
-	|	'(' host=StringConstant ')'		# AclEntryIgnorableHost
-	|	address=IpAddress				# AclEntryIpAddress
-	|	subnet=SubnetMask				# AclEntrySubnetMask
+	:	host=StringConstant						# AclEntryNonIgnorableHost
+	|	LParens host=StringConstant RParens		# AclEntryIgnorableHost
+	|	address=IpAddress						# AclEntryIpAddress
+	|	subnet=SubnetMask						# AclEntrySubnetMask
 	;
 
 procedureDeclaration
-	:	'sub' name=VclIdentifier compoundStatement		{InCustomFunction = false;}		# SystemProcedureDeclaration
-	|	'sub' name=Identifier compoundStatement			{InCustomFunction = true;}		# CustomProcedureDeclaration
+	:	Sub name=VclIdentifier compoundStatement		{InCustomFunction = false;}		# SystemProcedureDeclaration
+	|	Sub name=Identifier compoundStatement			{InCustomFunction = true;}		# CustomProcedureDeclaration
 	;
 
 statement
@@ -182,48 +182,48 @@ statement
 	;
 
 expressionStatement
-	:	expression? ';'
+	:	expression? Semi
 	;
 
 varStatement
-	:	'declare' 'local' name=VarIdentifier type=('BOOL' | 'INTEGER' | 'FLOAT' | 'TIME' | 'RTIME' | 'STRING') ';'
+	:	Declare Local Var Dot name=Identifier type=('BOOL' | 'INTEGER' | 'FLOAT' | 'TIME' | 'RTIME' | 'STRING') Semi
 	;
 
 ifStatement
-	:	If '(' test=conditionalOrExpression ')' ifTrue=statement (('elseif' | 'elsif' | 'elif') '(' otherTest=conditionalOrExpression ')' otherTrue=statement)* ('else' elseStmt=statement)?
+	:	If LParens test=conditionalOrExpression RParens ifTrue=statement ((Elseif | Elsif | Elif) LParens otherTest=conditionalOrExpression RParens otherTrue=statement)* (Else elseStmt=statement)?
 	;
 
 setStatement
-	:	'set' lhs=memberAccessExpression '=' rhs=expression ';'
+	:	Set lhs=memberAccessExpression Equal rhs=expression Semi
 	;
 
 removeStatement
-	:	('remove' | 'unset') id=memberAccessExpression ';'
+	:	(Remove | Unset) id=memberAccessExpression Semi
 	;
 
 errorStatement
-	:	'error' statusCode=IntegerConstant statusDescription=StringConstant ';'
+	:	Error statusCode=IntegerConstant statusDescription=StringConstant Semi
 	;
 
 syntheticStatement
-	:	'synthetic' stringLiteral ';'
+	:	Synthetic stringLiteral Semi
 	;
 
 callStatement
-	:	'call' subroutineName=Identifier ';'
+	:	Call subroutineName=Identifier Semi
 	;
 
 hashDataStatement
-	:	'hash_data' '(' expr=expression ')' ';'
+	:	HashData LParens expr=expression RParens Semi
 	;
 
 returnStatement
-	:	{InCustomFunction}? 'return' ';'
-	|	'return' '(' returnStateExpression ')' ';'
+	:	{InCustomFunction}? Return Semi
+	|	Return LParens returnStateExpression RParens Semi
 	;
 
 restartStatement
-	:	'restart' ';'
+	:	Restart Semi
 	;
 
 returnStateExpression
@@ -232,23 +232,23 @@ returnStateExpression
 	;
 	
 simpleReturnStateExpression
-	:	'restart'
-	|	'receive'
-	|	'hash'
-	|	'lookup'
-	|	'busy'
-	|	'purge'
-	|	'pass'
-	|	'pipe'
-	|	'hit'
-	|	'miss'
-	|	'hit-for-pass'
-	|	'fetch'
-	|	'deliver'
-	|	'done'
-	|	'abandon'
-	|	'retry'
-	|	'error'
+	:	Restart
+	|	Receive
+	|	Hash
+	|	Lookup
+	|	Busy
+	|	Purge
+	|	Pass
+	|	Pipe
+	|	Hit
+	|	Miss
+	|	HitForPass
+	|	Fetch
+	|	Deliver
+	|	Done
+	|	Abandon
+	|	Retry
+	|	Error
 	;
 
 complexReturnStateExpression
@@ -256,11 +256,11 @@ complexReturnStateExpression
 	;
 
 returnSynthStateExpression
-	:	'synth' '(' statusCode=IntegerConstant (',' statusDescription=StringConstant )? ')'
+	:	Synth LParens statusCode=IntegerConstant (Comma statusDescription=StringConstant )? RParens
 	;
 
 compoundStatement
-	:	'{' blockItemList? '}'
+	:	LBrace blockItemList? RBrace
 	;
 
 blockItemList
@@ -286,11 +286,11 @@ nonAssignmentExpression
 	;
 
 assignmentOperator
-	:	'=' | '+=' | '-='
+	:	Equal | '+=' | '-='
 	;
 
 conditionalExpression
-	:	If '(' conditionalOrExpression ',' ifTrue=expression ',' ifFalse=expression ')'
+	:	If LParens conditionalOrExpression Comma ifTrue=expression Comma ifFalse=expression RParens
 	;
 
 conditionalOrExpression
@@ -332,37 +332,37 @@ multiplicativeExpression
 	;
 
 unaryExpression
-	:	primaryExpression			# UnaryPassthrough
-	|	op='!' unaryExpression		# UnaryNegateExpression
+	:	primaryExpression				# UnaryPassthrough
+	|	op=Exclaim unaryExpression		# UnaryNegateExpression
 	;
 
 primaryExpression
 	:	globalFunctionExpression
 	|	memberAccessExpression
 	|	literalExpression
-	|	'(' expression ')'
+	|	LParens expression RParens
 	;
 
 globalFunctionExpression
-	:	'now'																								# GlobalNow
-	|	'boltsort.sort' '(' url=stringLiteral ')'															# GlobalUrlSort
-	|	'cstr_escape' '(' cstr=stringLiteral ')'															# GlobalStringEscape
-	|	'http_status_when' '(' statusCode=integerLiteral ',' commaSeparatedStatusCodes=stringLiteral ')'	# GlobalHttpStatusWhen
-	|	'std.atoi' '(' text=stringLiteral ')'																# GlobalAtoI
-	|	'std.strstr' '(' haystack=stringLiteral ',' needle=stringLiteral ')'								# GlobalStrStr
-	|	'std.strtol' '(' text=stringLiteral ',' base=integerLiteral ')'										# GlobalStrToL
-	|	'std.tolower' '(' text=stringLiteral ')'															# GlobalToLower
-	|	'std.toupper' '(' text=stringLiteral ')'															# GlobalToUpper
-	|	('std.ip' | 'std.str2ip') '(' address=stringLiteral ',' fallback=stringLiteral ')'					# GlobalStrToIp
-	|	'std.strlen' '(' text=stringLiteral ')'																# GlobalStrLen
-	|	'subfield' '(' header=stringLiteral ',' fieldName=stringLiteral (',' sep=stringLiteral)? ')'		# GlobalSubField
-	|	'urlencode' '(' text=stringLiteral ')'																# GlobalUrlEncode
-	|	'urldecode' '(' text=stringLiteral ')'																# GlobalUrlDecode
+	:	'now'																											# GlobalNow
+	|	'boltsort' Dot 'sort' LParens url=stringLiteral RParens															# GlobalUrlSort
+	|	'cstr_escape' LParens cstr=stringLiteral RParens																# GlobalStringEscape
+	|	'http_status_when' LParens statusCode=integerLiteral Comma commaSeparatedStatusCodes=stringLiteral RParens		# GlobalHttpStatusWhen
+	|	Std Dot 'atoi' LParens text=stringLiteral RParens																# GlobalAtoI
+	|	Std Dot 'strstr' LParens haystack=stringLiteral Comma needle=stringLiteral RParens								# GlobalStrStr
+	|	Std Dot 'strtol' LParens text=stringLiteral Comma base=integerLiteral RParens									# GlobalStrToL
+	|	Std Dot 'tolower' LParens text=stringLiteral RParens															# GlobalToLower
+	|	Std Dot 'toupper' LParens text=stringLiteral RParens															# GlobalToUpper
+	|	Std Dot ('ip' | 'str2ip') LParens address=stringLiteral Comma fallback=stringLiteral RParens					# GlobalStrToIp
+	|	Std Dot 'strlen' LParens text=stringLiteral RParens																# GlobalStrLen
+	|	'subfield' LParens header=stringLiteral Comma fieldName=stringLiteral (Comma sep=stringLiteral)? RParens		# GlobalSubField
+	|	'urlencode' LParens text=stringLiteral RParens																	# GlobalUrlEncode
+	|	'urldecode' LParens text=stringLiteral RParens																	# GlobalUrlDecode
 	;
 
 memberAccessExpression
-	:	obj=contextTransferObjects '.' 'http' '.' header=IdentifierWithHyphen								# AccessMemberHttp
-	|	obj=contextAllObjects '.' name=Identifier															# AccessMemberNormal
+	:	obj=contextTransferObjects Dot Http Dot header=IdentifierWithHyphen												# AccessMemberHttp
+	|	obj=contextAllObjects Dot name=Identifier																		# AccessMemberNormal
 	;
 
 contextTransferObjects
@@ -421,10 +421,6 @@ booleanLiteral
  * Lexer Rules
  */
 
-VarIdentifier
-	:	'var.' IdentifierNondigit IdentifierAny*
-	;
-
 VclIdentifier
 	:	'vcl_' IdentifierNondigit IdentifierAny*
 	;
@@ -454,12 +450,140 @@ StringConstant
 	:	'"' CharacterSequence? '"'
 	;
 
-AclExclude
+Exclaim
 	:	'!'
+	;
+
+Comma
+	:	','
+	;
+
+Backend
+	:	'backend'
+	;
+
+Include
+	:	'include'
+	;
+
+Probe
+	:	'probe'
+	;
+
+Acl
+	:	'acl'
+	;
+
+Sub
+	:	'sub'
 	;
 
 If
 	:	'if'
+	;
+
+Elseif
+	:	'elseif'
+	;
+
+Elsif
+	:	'elsif'
+	;
+
+Elif
+	:	'elif'
+	;
+
+Else
+	:	'else'
+	;
+
+Synthetic
+	:	'synthetic'
+	;
+
+Call
+	:	'call'
+	;
+
+Return
+	:	'return'
+	;
+
+HashData
+	:	'hash_data'
+	;
+
+Synth
+	:	'synth'
+	;
+
+Std
+	:	'std'
+	;
+
+Http
+	:	'http'
+	;
+
+Host
+	:	'host'
+	;
+
+Port
+	:	'port'
+	;
+
+HostHeader
+	:	'host_header'
+	;
+
+ProxyHeader
+	:	'proxy_header'
+	;
+
+MaxConnections
+	:	'max_connections'
+	;
+
+ConnectionTimeout
+	:	'connection_timeout'
+	;
+
+FirstByteTimeout
+	:	'first_byte_timeout'
+	;
+
+BetweenBytesTimeout
+	:	'between_bytes_timeout'
+	;
+
+Url
+	:	'url'
+	;
+
+Timeout
+	:	'timeout'
+	;
+
+Interval
+	:	'interval'
+	;
+
+ExpectedResponse
+	:	'expected_response'
+	;
+
+Initial
+	:	'initial'
+	;
+
+Window
+	:	'window'
+	;
+
+Threshold
+	:	'threshold'
 	;
 
 Request
@@ -494,8 +618,120 @@ Remote
 	:	'remote'
 	;
 
+Declare
+	:	'declare'
+	;
+
+Set
+	:	'set'
+	;
+
+Unset
+	:	'unset'
+	;
+
+Remove
+	:	'remove'
+	;
+
+Error
+	:	'error'
+	;
+
+Restart
+	:	'restart'
+	;
+
+Receive
+	:	'receive'
+	;
+
+Hash
+	:	'hash'
+	;
+
+Lookup
+	:	'lookup'
+	;
+
+Busy
+	:	'busy'
+	;
+
+Purge
+	:	'purge'
+	;
+
+Pass
+	:	'pass'
+	;
+
+Pipe
+	:	'pipe'
+	;
+
+Hit
+	:	'hit'
+	;
+
+Miss
+	:	'miss'
+	;
+
+HitForPass
+	:	'hit-for-pass'
+	;
+
+Fetch
+	:	'fetch'
+	;
+
+Deliver
+	:	'deliver'
+	;
+
+Done
+	:	'done'
+	;
+
+Abandon
+	:	'abandon'
+	;
+
+Retry
+	:	'retry'
+	;
+
 Var
 	:	'var'
+	;
+
+Equal
+	:	'='
+	;
+
+Dot
+	:	'.'
+	;
+
+Semi
+	:	';'
+	;
+
+LParens
+	:	'('
+	;
+
+RParens
+	:	')'
+	;
+
+LBrace
+	:	'{'
+	;
+
+RBrace
+	:	'}'
 	;
 
 fragment
