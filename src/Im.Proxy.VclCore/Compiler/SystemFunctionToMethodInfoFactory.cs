@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using Im.Proxy.VclCore.Model;
 
 namespace Im.Proxy.VclCore.Compiler
 {

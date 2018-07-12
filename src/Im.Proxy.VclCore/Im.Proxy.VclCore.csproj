@@ -162,7 +162,7 @@
   <ItemGroup>
     <Antlr4 Include="Compiler\Vcl.g4">
       <Generator>MSBuild:Compile</Generator>
-      <CustomToolNamespace>Im.Proxy.VclCore</CustomToolNamespace>
+      <CustomToolNamespace>Im.Proxy.VclCore.Compiler</CustomToolNamespace>
       <Listener>False</Listener>
       <Visitor>True</Visitor>
     </Antlr4>

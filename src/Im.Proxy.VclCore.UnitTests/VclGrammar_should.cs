@@ -1,17 +1,12 @@
 ﻿using System;
 using System.IO;
-using System.Linq.Expressions;
-using System.Text;
 using FluentAssertions;
 using Im.Proxy.VclCore.Compiler;
-using Im.Proxy.VclCore.Model;
-using Im.Proxy.VclCore.UnitTests.Properties;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Im.Proxy.VclCore.UnitTests
