@@ -396,7 +396,7 @@ namespace Im.Proxy.VclCore.Compiler
                     break;
                 case "STRING":
                     type = typeof(string);
-                    initialValueExpression = new CodePrimitiveExpression((string)null);
+                    initialValueExpression = new CodePrimitiveExpression(null);
                     break;
                 default:
                     throw new InvalidOperationException("Unexpected variable type encountered");
@@ -468,12 +468,10 @@ namespace Im.Proxy.VclCore.Compiler
         public override CodeObject VisitRemoveStatement(VclParser.RemoveStatementContext context)
         {
             base.VisitRemoveStatement(context);
-            var lhs = VisitMemberAccessExpression(context.id);
+            var lhs = (CodeExpression)VisitMemberAccessExpression(context.id);
             // TODO: Ensure we match type with LHS
-            var rhs = new CodePrimitiveExpression((string)null);
-            return new CodeAssignStatement(
-                (CodeExpression)lhs,
-                (CodeExpression)rhs);
+            var rhs = new CodePrimitiveExpression(null);
+            return new CodeAssignStatement(lhs, rhs);
         }
 
         public override CodeObject VisitErrorStatement(VclParser.ErrorStatementContext context)
@@ -708,7 +706,7 @@ namespace Im.Proxy.VclCore.Compiler
             // TODO: Convert from PRCE regex to .NET regex
 
             // For now you'll need to do this by hand
-            return new System.CodeDom.CodeObjectCreateExpression(
+            return new CodeObjectCreateExpression(
                 typeof(Regex),
                 new CodePrimitiveExpression(expr),
                 new CodePrimitiveExpression(
@@ -897,6 +895,7 @@ namespace Im.Proxy.VclCore.Compiler
                 throw new ArgumentException("Unable to determine top-level object");
             }
 
+            // ReSharper disable once PossibleNullReferenceException
             var type = expression
                 .GetExpressionType()
                 .GetProperty(

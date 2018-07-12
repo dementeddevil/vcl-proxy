@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Im.Proxy.VclCore.Compiler;
 
 namespace Im.Proxy.VclCore.UnitTests
 {

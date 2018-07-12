@@ -33,7 +33,7 @@ namespace Im.Proxy.VclCore.Model
                     return !_ignorable;
                 }
 
-                return addresses.Any(address => address == client);
+                return addresses.Any(address => address.GetAddressBytes() == client.GetAddressBytes());
             }
         }
 
@@ -51,7 +51,7 @@ namespace Im.Proxy.VclCore.Model
 
             public override bool IsMatch(IPAddress client)
             {
-                return _address == client;
+                return _address.GetAddressBytes() == client.GetAddressBytes();
             }
         }
 

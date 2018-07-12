@@ -129,7 +129,6 @@
     <Compile Include="Compiler\VclCompileNamedSubroutine.cs" />
     <Compile Include="Compiler\VclCompilerContext.cs" />
     <Compile Include="Compiler\VclGlobalFunctions.cs" />
-    <Compile Include="Compiler\VclHandlerCompiler.cs" />
     <Compile Include="Compiler\VclHandlerCompilerContext.cs" />
     <Compile Include="Compiler\VclHelpers.cs" />
     <Compile Include="Model\VclAcl.cs" />
