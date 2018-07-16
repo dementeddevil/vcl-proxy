@@ -1,4 +1,4 @@
-grammar Vcl;
+parser grammar Vcl;
 
 @parser::members{
 	public bool InCustomFunction { get; set; }
@@ -186,11 +186,11 @@ expressionStatement
 	;
 
 varStatement
-	:	Declare Local Var Dot name=Identifier type=('BOOL' | 'INTEGER' | 'FLOAT' | 'TIME' | 'RTIME' | 'STRING') Semi
+	:	Declare Local VarToken Dot name=Identifier type=(TypeBool | TypeInt | TypeFloat | TypeTime | TypeRtime | TypeString) Semi
 	;
 
 ifStatement
-	:	If LParens test=conditionalOrExpression RParens ifTrue=statement ((Elseif | Elsif | Elif) LParens otherTest=conditionalOrExpression RParens otherTrue=statement)* (Else elseStmt=statement)?
+	:	IfToken LParens test=conditionalOrExpression RParens ifTrue=statement ((Elseif | Elsif | Elif) LParens otherTest=conditionalOrExpression RParens otherTrue=statement)* (Else elseStmt=statement)?
 	;
 
 setStatement
@@ -286,49 +286,49 @@ nonAssignmentExpression
 	;
 
 assignmentOperator
-	:	Equal | '+=' | '-='
+	:	Equal | PlusEqual | MinusEqual
 	;
 
 conditionalExpression
-	:	If LParens conditionalOrExpression Comma ifTrue=expression Comma ifFalse=expression RParens
+	:	IfToken LParens conditionalOrExpression Comma ifTrue=expression Comma ifFalse=expression RParens
 	;
 
 conditionalOrExpression
-	:	lhs=conditionalAndExpression ('||' rhs=conditionalAndExpression)*
+	:	lhs=conditionalAndExpression (DoubleOr rhs=conditionalAndExpression)*
 	;
 
 conditionalAndExpression
-	:	lhs=inclusiveOrExpression ('&&' rhs=inclusiveOrExpression)*
+	:	lhs=inclusiveOrExpression (DoubleAnd rhs=inclusiveOrExpression)*
 	;
 
 inclusiveOrExpression
-	:	lhs=exclusiveOrExpression ('|' rhs=exclusiveOrExpression)*
+	:	lhs=exclusiveOrExpression (Or rhs=exclusiveOrExpression)*
 	;
 
 exclusiveOrExpression
-	:	lhs=andExpression ('^' rhs=andExpression)*
+	:	lhs=andExpression (Hat rhs=andExpression)*
 	;
 
 andExpression
-	:	lhs=equalityExpression ('&' rhs=equalityExpression)*
+	:	lhs=equalityExpression (And rhs=equalityExpression)*
 	;
 
 equalityExpression
-	:	lhs=relationalExpression (op=('==' | '!=') rhs=relationalExpression)*		# EqualStandardExpression
-	|	lhs=relationalExpression (op=('~' | '!~') rhs=regularExpression)*			# MatchRegexExpression
-	|	lhs=relationalExpression (op=('~' | '!~') rhs=aclReferenceExpression)*		# MatchAclExpression
+	:	lhs=relationalExpression (op=(DoubleEqual | ExclaimEqual) rhs=relationalExpression)*	# EqualStandardExpression
+	|	lhs=relationalExpression (op=(Tilde | ExclaimTilde) rhs=regularExpression)*				# MatchRegexExpression
+	|	lhs=relationalExpression (op=(Tilde | ExclaimTilde) rhs=aclReferenceExpression)*		# MatchAclExpression
 	;
 
 relationalExpression
-	:	lhs=additiveExpression (op=('<' | '>' | '<=' | '>=') rhs=additiveExpression)*
+	:	lhs=additiveExpression (op=(LessThan | GreaterThan | LessThanEqual | GreaterThanEqual) rhs=additiveExpression)*
 	;
 
 additiveExpression
-	:	lhs=multiplicativeExpression (op=('+' | '-') rhs=multiplicativeExpression)*
+	:	lhs=multiplicativeExpression (op=(Plus | Hyphen) rhs=multiplicativeExpression)*
 	;
 
 multiplicativeExpression
-	:	lhs=unaryExpression (op=('*' | '/' | '%') rhs=unaryExpression)*
+	:	lhs=unaryExpression (op=(Star | Slash | Percent) rhs=unaryExpression)*
 	;
 
 unaryExpression
@@ -344,25 +344,18 @@ primaryExpression
 	;
 
 globalFunctionExpression
-	:	'now'																											# GlobalNow
-	|	'boltsort' Dot 'sort' LParens url=stringLiteral RParens															# GlobalUrlSort
-	|	'cstr_escape' LParens cstr=stringLiteral RParens																# GlobalStringEscape
-	|	'http_status_when' LParens statusCode=integerLiteral Comma commaSeparatedStatusCodes=stringLiteral RParens		# GlobalHttpStatusWhen
-	|	Std Dot 'atoi' LParens text=stringLiteral RParens																# GlobalAtoI
-	|	Std Dot 'strstr' LParens haystack=stringLiteral Comma needle=stringLiteral RParens								# GlobalStrStr
-	|	Std Dot 'strtol' LParens text=stringLiteral Comma base=integerLiteral RParens									# GlobalStrToL
-	|	Std Dot 'tolower' LParens text=stringLiteral RParens															# GlobalToLower
-	|	Std Dot 'toupper' LParens text=stringLiteral RParens															# GlobalToUpper
-	|	Std Dot ('ip' | 'str2ip') LParens address=stringLiteral Comma fallback=stringLiteral RParens					# GlobalStrToIp
-	|	Std Dot 'strlen' LParens text=stringLiteral RParens																# GlobalStrLen
-	|	'subfield' LParens header=stringLiteral Comma fieldName=stringLiteral (Comma sep=stringLiteral)? RParens		# GlobalSubField
-	|	'urlencode' LParens text=stringLiteral RParens																	# GlobalUrlEncode
-	|	'urldecode' LParens text=stringLiteral RParens																	# GlobalUrlDecode
+	:	Now																			# GlobalNow
+	|	lhs=Identifier (Dot rhs=Identifier)? LParens argumentList RParens			# GlobalMethod
+	;
+
+argumentList
+	:	expression
+	|	argumentList Comma expression
 	;
 
 memberAccessExpression
-	:	obj=contextTransferObjects Dot Http Dot header=IdentifierWithHyphen												# AccessMemberHttp
-	|	obj=contextAllObjects Dot name=Identifier																		# AccessMemberNormal
+	:	obj=contextTransferObjects Dot Http Dot header=IdentifierWithHyphen			# AccessMemberHttp
+	|	obj=contextAllObjects Dot name=Identifier									# AccessMemberNormal
 	;
 
 contextTransferObjects
@@ -378,7 +371,7 @@ contextAllObjects
 	|	Server
 	|	Local
 	|	Remote
-	|	Var
+	|	VarToken
 	;
 
 literalExpression
@@ -416,407 +409,3 @@ timeLiteral
 booleanLiteral
 	:	value=BooleanConstant
 	;
-
-/*
- * Lexer Rules
- */
-
-VclIdentifier
-	:	'vcl_' IdentifierNondigit IdentifierAny*
-	;
-
-Identifier
-    :   IdentifierNondigit IdentifierAny*
-    ;
-
-IdentifierWithHyphen
-	:   IdentifierNondigit IdentifierAnyWithHyphen*
-    ;
-
-IntegerConstant
-	:	Digit+
-	;
-
-TimeConstant
-	:	Digit+ ('ms' | 's' | 'm' | 'h' | 'd' | 'w' | 'y')
-	;
-
-BooleanConstant
-	:	'false'
-	|	'true'
-	;
-
-StringConstant
-	:	'"' CharacterSequence? '"'
-	;
-
-Exclaim
-	:	'!'
-	;
-
-Comma
-	:	','
-	;
-
-Backend
-	:	'backend'
-	;
-
-Include
-	:	'include'
-	;
-
-Probe
-	:	'probe'
-	;
-
-Acl
-	:	'acl'
-	;
-
-Sub
-	:	'sub'
-	;
-
-If
-	:	'if'
-	;
-
-Elseif
-	:	'elseif'
-	;
-
-Elsif
-	:	'elsif'
-	;
-
-Elif
-	:	'elif'
-	;
-
-Else
-	:	'else'
-	;
-
-Synthetic
-	:	'synthetic'
-	;
-
-Call
-	:	'call'
-	;
-
-Return
-	:	'return'
-	;
-
-HashData
-	:	'hash_data'
-	;
-
-Synth
-	:	'synth'
-	;
-
-Std
-	:	'std'
-	;
-
-Http
-	:	'http'
-	;
-
-Host
-	:	'host'
-	;
-
-Port
-	:	'port'
-	;
-
-HostHeader
-	:	'host_header'
-	;
-
-ProxyHeader
-	:	'proxy_header'
-	;
-
-MaxConnections
-	:	'max_connections'
-	;
-
-ConnectionTimeout
-	:	'connection_timeout'
-	;
-
-FirstByteTimeout
-	:	'first_byte_timeout'
-	;
-
-BetweenBytesTimeout
-	:	'between_bytes_timeout'
-	;
-
-Url
-	:	'url'
-	;
-
-Timeout
-	:	'timeout'
-	;
-
-Interval
-	:	'interval'
-	;
-
-ExpectedResponse
-	:	'expected_response'
-	;
-
-Initial
-	:	'initial'
-	;
-
-Window
-	:	'window'
-	;
-
-Threshold
-	:	'threshold'
-	;
-
-Request
-	:	'req'
-	;
-
-Response
-	:	'resp'
-	;
-
-BackendRequest
-	:	'bereq'
-	;
-
-BackendResponse
-	:	'beresp'
-	;
-
-Client
-	:	'client'
-	;
-
-Server
-	:	'server'
-	;
-
-Local
-	:	'local'
-	;
-
-Remote
-	:	'remote'
-	;
-
-Declare
-	:	'declare'
-	;
-
-Set
-	:	'set'
-	;
-
-Unset
-	:	'unset'
-	;
-
-Remove
-	:	'remove'
-	;
-
-Error
-	:	'error'
-	;
-
-Restart
-	:	'restart'
-	;
-
-Receive
-	:	'receive'
-	;
-
-Hash
-	:	'hash'
-	;
-
-Lookup
-	:	'lookup'
-	;
-
-Busy
-	:	'busy'
-	;
-
-Purge
-	:	'purge'
-	;
-
-Pass
-	:	'pass'
-	;
-
-Pipe
-	:	'pipe'
-	;
-
-Hit
-	:	'hit'
-	;
-
-Miss
-	:	'miss'
-	;
-
-HitForPass
-	:	'hit-for-pass'
-	;
-
-Fetch
-	:	'fetch'
-	;
-
-Deliver
-	:	'deliver'
-	;
-
-Done
-	:	'done'
-	;
-
-Abandon
-	:	'abandon'
-	;
-
-Retry
-	:	'retry'
-	;
-
-Var
-	:	'var'
-	;
-
-Equal
-	:	'='
-	;
-
-Dot
-	:	'.'
-	;
-
-Semi
-	:	';'
-	;
-
-LParens
-	:	'('
-	;
-
-RParens
-	:	')'
-	;
-
-LBrace
-	:	'{'
-	;
-
-RBrace
-	:	'}'
-	;
-
-fragment
-IdentifierNondigit
-    :   Nondigit
-    ;
-
-fragment
-IdentifierAny
-	:	Nondigit
-    |   Digit
-	;
-
-fragment
-IdentifierAnyWithHyphen
-	:	Nondigit
-	|	Digit
-	|	Hyphen
-	;
-
-HexEncoding
-	:	('%' [a-fA-F0-9] [a-fA-F0-9]) +
-	;
-
-SubnetMask
-	:	IpAddressSequence '/' Digit+
-	;
-
-IpAddress
-	:	IpAddressSequence
-	;
-
-fragment
-IpAddressSequence
-	:	'"' Digit+ '.' Digit+ '.' Digit+ '.' Digit+ '"'
-	;
-
-fragment
-CharacterSequence
-	:	Char+
-	;
-
-fragment
-Char
-	:	~["\r\n]
-	|	HexEncoding
-	;
-
-fragment
-Nondigit
-    :   [a-zA-Z_]
-    ;
-
-fragment
-Digit
-    :   [0-9]
-    ;
-
-fragment
-Hyphen
-	:	'-'
-	;
-
-Whitespace
-    :   [ \t]+
-        -> skip
-    ;
-
-Newline
-    :   (   '\r' '\n'?
-        |   '\n'
-        )
-        -> skip
-    ;
-
-SyntheticString
-	:	'{"' .*? '"}'
-	;
-
-BlockComment
-    :   '/*' .*? '*/'
-        -> skip
-    ;
-
-LineComment
-    :   ('# ' | '//') ~[\r\n]*
-        -> skip
-    ;

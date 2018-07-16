@@ -121,6 +121,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Compiler\CodeObjectExtensions.cs" />
+    <Compile Include="Compiler\VclLexer.g4.lexer.cs">
+      <DependentUpon>VclLexer.g4</DependentUpon>
+    </Compile>
     <Compile Include="Compiler\VclBaseExpressionVisitor.cs" />
     <Compile Include="Compiler\VclCompileIncludes.cs" />
     <Compile Include="Compiler\VclCompileNamedAclObjects.cs" />
@@ -147,9 +150,6 @@
     <Compile Include="Model\VclResponse.cs" />
     <Compile Include="Model\VclServer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Compiler\Vcl.g4.lexer.cs">
-      <DependentUpon>Vcl.g4</DependentUpon>
-    </Compile>
     <Compile Include="Compiler\Vcl.g4.parser.cs">
       <DependentUpon>Vcl.g4</DependentUpon>
     </Compile>
@@ -168,6 +168,10 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
+    <Antlr4 Include="Compiler\VclLexer.g4">
+      <Generator>MSBuild:Compile</Generator>
+      <CustomToolNamespace>Im.Proxy.VclCore.Compiler</CustomToolNamespace>
+    </Antlr4>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup />
