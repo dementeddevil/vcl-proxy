@@ -2,7 +2,7 @@
 
 namespace Im.Proxy.VclCore.Compiler
 {
-    public class VclCompileIncludes : VclBaseVisitor<bool>
+    public class VclCompileIncludes : VclParserBaseVisitor<bool>
     {
         public IList<string> Files { get; } = new List<string>();
 

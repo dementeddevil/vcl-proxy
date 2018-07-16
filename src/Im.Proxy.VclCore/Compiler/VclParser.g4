@@ -1,4 +1,4 @@
-parser grammar Vcl;
+parser grammar VclParser;
 
 @parser::members{
 	public bool InCustomFunction { get; set; }

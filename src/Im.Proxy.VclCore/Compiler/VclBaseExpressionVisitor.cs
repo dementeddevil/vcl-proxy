@@ -4,7 +4,7 @@ using Antlr4.Runtime.Misc;
 
 namespace Im.Proxy.VclCore.Compiler
 {
-    public class VclBaseExpressionVisitor : VclBaseVisitor<CodeObject>
+    public class VclBaseExpressionVisitor : VclParserBaseVisitor<CodeObject>
     {
         protected VclBaseExpressionVisitor(VclCompilerContext compilerContext)
         {

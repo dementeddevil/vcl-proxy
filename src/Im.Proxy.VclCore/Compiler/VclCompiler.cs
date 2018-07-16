@@ -173,7 +173,7 @@ namespace Im.Proxy.VclCore.Compiler
             CompileAndVisit(vclContent, subCompiler);
         }
 
-        public TResult CompileAndVisit<TResult>(string vclContent, IVclVisitor<TResult> visitor)
+        public TResult CompileAndVisit<TResult>(string vclContent, IVclParserVisitor<TResult> visitor)
         {
             var cacheKey = $"CompiledParseTree:{vclContent.GetHashCode():X}";
             if (!_memCache.TryGetValue(cacheKey, out VclParser parser))

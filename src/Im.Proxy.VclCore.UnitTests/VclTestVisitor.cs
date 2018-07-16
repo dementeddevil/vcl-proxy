@@ -4,7 +4,7 @@ using Im.Proxy.VclCore.Compiler;
 
 namespace Im.Proxy.VclCore.UnitTests
 {
-    public class VclTestVisitor : VclBaseVisitor<bool>
+    public class VclTestVisitor : VclParserBaseVisitor<bool>
     {
         public IList<string> Operations { get; } = new List<string>();
 
