@@ -24,20 +24,50 @@ Sub
 	:	'sub'
 	;
 
+StringConstant
+	:	'"' CharacterSequence? '"'
+	;
+
+VclIdentifier
+	:	SystemSubPrefix IdentifierNondigit IdentifierAny*
+	;
+
+Identifier
+    :   IdentifierNondigit IdentifierAny*
+    ;
+
+Whitespace
+    :   [ \t]+
+        -> skip
+    ;
+
+Newline
+    :   (   '\r' '\n'?
+        |   '\n'
+        )
+        -> skip
+    ;
+
+BlockComment
+    :   '/*' .*? '*/'
+        -> skip
+    ;
+
+LineComment
+    :   ('# ' | '//') ~[\r\n]*
+        -> skip
+    ;
+
 LBrace
 	:	'{'
-		-> pushMode(BLOCK)
 	;
 
 Semi
 	:	';'
 	;
 
-mode BLOCK;
-
 RBrace
 	:	'}'
-		-> popMode
 	;
 
 IfToken
@@ -296,14 +326,6 @@ TypeString
 	:	'STRING'
 	;
 
-BoolFalse
-	:	'false'
-	;
-
-BoolTrue
-	:	'true'
-	;
-
 BooleanConstant
 	:	BoolFalse
 	|	BoolTrue
@@ -316,18 +338,6 @@ TimeConstant
 IntegerConstant
 	:	Digit+
 	;
-
-StringConstant
-	:	'"' CharacterSequence? '"'
-	;
-
-VclIdentifier
-	:	SystemSubPrefix IdentifierNondigit IdentifierAny*
-	;
-
-Identifier
-    :   IdentifierNondigit IdentifierAny*
-    ;
 
 IdentifierWithHyphen
 	:   IdentifierNondigit IdentifierAnyWithHyphen*
@@ -433,6 +443,26 @@ RParens
 	:	')'
 	;
 
+Minus
+	:	Hyphen
+	;
+
+HexEncoding
+	:	('%' [a-fA-F0-9] [a-fA-F0-9]) +
+	;
+
+SubnetMask
+	:	IpAddressSequence '/' Digit+
+	;
+
+IpAddress
+	:	IpAddressSequence
+	;
+
+SyntheticString
+	:	'{"' .*? '"}'
+	;
+
 fragment
 SystemSubPrefix
 	:	'vcl_'
@@ -454,18 +484,6 @@ IdentifierAnyWithHyphen
 	:	Nondigit
 	|	Digit
 	|	Hyphen
-	;
-
-HexEncoding
-	:	('%' [a-fA-F0-9] [a-fA-F0-9]) +
-	;
-
-SubnetMask
-	:	IpAddressSequence '/' Digit+
-	;
-
-IpAddress
-	:	IpAddressSequence
 	;
 
 fragment
@@ -499,28 +517,12 @@ Hyphen
 	:	'-'
 	;
 
-Whitespace
-    :   [ \t]+
-        -> skip
-    ;
-
-Newline
-    :   (   '\r' '\n'?
-        |   '\n'
-        )
-        -> skip
-    ;
-
-SyntheticString
-	:	'{"' .*? '"}'
+fragment
+BoolFalse
+	:	'false'
 	;
 
-BlockComment
-    :   '/*' .*? '*/'
-        -> skip
-    ;
-
-LineComment
-    :   ('# ' | '//') ~[\r\n]*
-        -> skip
-    ;
+fragment
+BoolTrue
+	:	'true'
+	;

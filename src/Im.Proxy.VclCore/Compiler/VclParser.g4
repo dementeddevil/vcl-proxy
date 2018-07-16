@@ -324,7 +324,7 @@ relationalExpression
 	;
 
 additiveExpression
-	:	lhs=multiplicativeExpression (op=(Plus | Hyphen) rhs=multiplicativeExpression)*
+	:	lhs=multiplicativeExpression (op=(Plus | Minus) rhs=multiplicativeExpression)*
 	;
 
 multiplicativeExpression
@@ -355,7 +355,7 @@ argumentList
 
 memberAccessExpression
 	:	obj=contextTransferObjects Dot Http Dot header=IdentifierWithHyphen			# AccessMemberHttp
-	|	obj=contextAllObjects Dot name=Identifier									# AccessMemberNormal
+	|	obj=contextAllObjects Dot name=(Identifier | Backend)									# AccessMemberNormal
 	;
 
 contextTransferObjects

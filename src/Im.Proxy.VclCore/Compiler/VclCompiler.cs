@@ -173,20 +173,20 @@ namespace Im.Proxy.VclCore.Compiler
             CompileAndVisit(vclContent, subCompiler);
         }
 
-        public TResult CompileAndVisit<TResult>(string vclContent, IVclParserVisitor<TResult> visitor)
+        public TResult CompileAndVisit<TResult>(string vclContent, IVclLangVisitor<TResult> visitor)
         {
             var cacheKey = $"CompiledParseTree:{vclContent.GetHashCode():X}";
-            if (!_memCache.TryGetValue(cacheKey, out VclParser parser))
+            if (!_memCache.TryGetValue(cacheKey, out VclLangParser parser))
             {
                 using (var textStream = new StringReader(vclContent))
                 {
                     // Pass text stream through lexer for tokenising
                     var tokenStream = new AntlrInputStream(textStream);
-                    var lexer = new VclLexer(tokenStream);
+                    var lexer = new VclLangLexer(tokenStream);
 
                     // Pass token stream through parser to product AST
                     var stream = new CommonTokenStream(lexer);
-                    parser = new VclParser(stream);
+                    parser = new VclLangParser(stream);
 
                     // Cache parse tree for 120 seconds on sliding expiration
                     _memCache.Set(cacheKey, parser, TimeSpan.FromSeconds(120));

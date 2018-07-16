@@ -4,7 +4,7 @@ using Antlr4.Runtime.Misc;
 
 namespace Im.Proxy.VclCore.Compiler
 {
-    public class VclBaseExpressionVisitor : VclParserBaseVisitor<CodeObject>
+    public class VclBaseExpressionVisitor : VclLangBaseVisitor<CodeObject>
     {
         protected VclBaseExpressionVisitor(VclCompilerContext compilerContext)
         {
@@ -13,25 +13,25 @@ namespace Im.Proxy.VclCore.Compiler
 
         protected VclCompilerContext CompilerContext { get; }
 
-        public override CodeObject VisitStringLiteral(VclParser.StringLiteralContext context)
+        public override CodeObject VisitStringLiteral(VclLangParser.StringLiteralContext context)
         {
             base.VisitStringLiteral(context);
             return new CodePrimitiveExpression(context.value.Text.Trim('"'));
         }
 
-        public override CodeObject VisitSynthenticLiteral([NotNull] VclParser.SynthenticLiteralContext context)
+        public override CodeObject VisitSynthenticLiteral([NotNull] VclLangParser.SynthenticLiteralContext context)
         {
             base.VisitSynthenticLiteral(context);
             return new CodePrimitiveExpression(context.value.Text.Trim('"', '{', '}'));
         }
 
-        public override CodeObject VisitIntegerLiteral(VclParser.IntegerLiteralContext context)
+        public override CodeObject VisitIntegerLiteral(VclLangParser.IntegerLiteralContext context)
         {
             base.VisitIntegerLiteral(context);
             return new CodePrimitiveExpression(int.Parse(context.value.Text));
         }
 
-        public override CodeObject VisitTimeLiteral(VclParser.TimeLiteralContext context)
+        public override CodeObject VisitTimeLiteral(VclLangParser.TimeLiteralContext context)
         {
             base.VisitTimeLiteral(context);
             var rawValue = context.value.Text;
@@ -70,7 +70,7 @@ namespace Im.Proxy.VclCore.Compiler
             return new CodePrimitiveExpression(value);
         }
 
-        public override CodeObject VisitBooleanLiteral(VclParser.BooleanLiteralContext context)
+        public override CodeObject VisitBooleanLiteral(VclLangParser.BooleanLiteralContext context)
         {
             base.VisitBooleanLiteral(context);
             return new CodePrimitiveExpression(bool.Parse(context.value.Text));

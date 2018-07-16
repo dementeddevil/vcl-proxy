@@ -1,6 +1,6 @@
 ﻿namespace Im.Proxy.VclCore.Compiler
 {
-    partial class VclParser
+    partial class VclLangParser
     {
     }
 }

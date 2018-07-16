@@ -200,7 +200,7 @@ namespace Im.Proxy.VclCore.Compiler
         {
         }
 
-        public override CodeObject VisitSystemProcedureDeclaration(VclParser.SystemProcedureDeclarationContext context)
+        public override CodeObject VisitSystemProcedureDeclaration(VclLangParser.SystemProcedureDeclarationContext context)
         {
             // Get or create method body expression
             var name = context.name.Text;
@@ -209,7 +209,7 @@ namespace Im.Proxy.VclCore.Compiler
             return null;
         }
 
-        public override CodeObject VisitCustomProcedureDeclaration(VclParser.CustomProcedureDeclarationContext context)
+        public override CodeObject VisitCustomProcedureDeclaration(VclLangParser.CustomProcedureDeclarationContext context)
         {
             // Create method body expression
             var name = context.name.Text;
@@ -218,22 +218,22 @@ namespace Im.Proxy.VclCore.Compiler
             return null;
         }
 
-        public override CodeObject VisitAclDeclaration(VclParser.AclDeclarationContext context)
+        public override CodeObject VisitAclDeclaration(VclLangParser.AclDeclarationContext context)
         {
             return null;
         }
 
-        public override CodeObject VisitBackendDeclaration(VclParser.BackendDeclarationContext context)
+        public override CodeObject VisitBackendDeclaration(VclLangParser.BackendDeclarationContext context)
         {
             return null;
         }
 
-        public override CodeObject VisitProbeDeclaration(VclParser.ProbeDeclarationContext context)
+        public override CodeObject VisitProbeDeclaration(VclLangParser.ProbeDeclarationContext context)
         {
             return null;
         }
 
-        public override CodeObject VisitCallStatement(VclParser.CallStatementContext context)
+        public override CodeObject VisitCallStatement(VclLangParser.CallStatementContext context)
         {
             var subroutineName = context.subroutineName.Text;
             if (subroutineName.StartsWith("vcl_", StringComparison.OrdinalIgnoreCase))
@@ -269,13 +269,13 @@ namespace Im.Proxy.VclCore.Compiler
             return base.VisitCallStatement(context);
         }
 
-        public override CodeObject VisitRestartStatement(VclParser.RestartStatementContext context)
+        public override CodeObject VisitRestartStatement(VclLangParser.RestartStatementContext context)
         {
             return new CodeMethodReturnStatement(
                 new CodePrimitiveExpression(VclFrontendAction.Restart));
         }
 
-        public override CodeObject VisitReturnStatement(VclParser.ReturnStatementContext context)
+        public override CodeObject VisitReturnStatement(VclLangParser.ReturnStatementContext context)
         {
             // If we have no return state then we must be in a custom function
             if (context.returnStateExpression() == null)
@@ -289,7 +289,7 @@ namespace Im.Proxy.VclCore.Compiler
             return base.VisitReturnStatement(context);
         }
 
-        public override CodeObject VisitSimpleReturnStateExpression(VclParser.SimpleReturnStateExpressionContext context)
+        public override CodeObject VisitSimpleReturnStateExpression(VclLangParser.SimpleReturnStateExpressionContext context)
         {
             base.VisitSimpleReturnStateExpression(context);
 
@@ -298,7 +298,7 @@ namespace Im.Proxy.VclCore.Compiler
                 new CodePrimitiveExpression(Enum.Parse(typeof(VclFrontendAction), action, true)));
         }
 
-        public override CodeObject VisitComplexReturnStateExpression(VclParser.ComplexReturnStateExpressionContext context)
+        public override CodeObject VisitComplexReturnStateExpression(VclLangParser.ComplexReturnStateExpressionContext context)
         {
             base.VisitComplexReturnStateExpression(context);
 
@@ -306,7 +306,7 @@ namespace Im.Proxy.VclCore.Compiler
             return null;
         }
 
-        public override CodeObject VisitHashDataStatement(VclParser.HashDataStatementContext context)
+        public override CodeObject VisitHashDataStatement(VclLangParser.HashDataStatementContext context)
         {
             // Get expression to add to the hash
             var expr = (CodeExpression)VisitExpression(context.expr);
@@ -320,7 +320,7 @@ namespace Im.Proxy.VclCore.Compiler
                 expr);
         }
 
-        public override CodeObject VisitCompoundStatement(VclParser.CompoundStatementContext context)
+        public override CodeObject VisitCompoundStatement(VclLangParser.CompoundStatementContext context)
         {
             _currentCompoundStatementVariables.Push(
                 new Dictionary<string, CodeVariableReferenceExpression>(StringComparer.OrdinalIgnoreCase));
@@ -342,7 +342,7 @@ namespace Im.Proxy.VclCore.Compiler
             }
         }
 
-        public override CodeObject VisitStatement(VclParser.StatementContext context)
+        public override CodeObject VisitStatement(VclLangParser.StatementContext context)
         {
             var expression = base.VisitStatement(context);
             if (expression != null)
@@ -352,7 +352,7 @@ namespace Im.Proxy.VclCore.Compiler
             return expression;
         }
 
-        public override CodeObject VisitVarStatement(VclParser.VarStatementContext context)
+        public override CodeObject VisitVarStatement(VclLangParser.VarStatementContext context)
         {
             var name = context.name.Text.Substring(4).SafeIdentifier("local");
 
@@ -416,7 +416,7 @@ namespace Im.Proxy.VclCore.Compiler
             return referenceExpression;
         }
 
-        public override CodeObject VisitIfStatement(VclParser.IfStatementContext context)
+        public override CodeObject VisitIfStatement(VclLangParser.IfStatementContext context)
         {
             base.VisitIfStatement(context);
             if (context.otherTest.IsEmpty && context.elseStmt.IsEmpty)
@@ -455,7 +455,7 @@ namespace Im.Proxy.VclCore.Compiler
                 });
         }
 
-        public override CodeObject VisitSetStatement(VclParser.SetStatementContext context)
+        public override CodeObject VisitSetStatement(VclLangParser.SetStatementContext context)
         {
             base.VisitSetStatement(context);
             var lhs = VisitMemberAccessExpression(context.lhs);
@@ -465,7 +465,7 @@ namespace Im.Proxy.VclCore.Compiler
                 (CodeExpression)rhs);
         }
 
-        public override CodeObject VisitRemoveStatement(VclParser.RemoveStatementContext context)
+        public override CodeObject VisitRemoveStatement(VclLangParser.RemoveStatementContext context)
         {
             base.VisitRemoveStatement(context);
             var lhs = (CodeExpression)VisitMemberAccessExpression(context.id);
@@ -474,7 +474,7 @@ namespace Im.Proxy.VclCore.Compiler
             return new CodeAssignStatement(lhs, rhs);
         }
 
-        public override CodeObject VisitErrorStatement(VclParser.ErrorStatementContext context)
+        public override CodeObject VisitErrorStatement(VclLangParser.ErrorStatementContext context)
         {
             // Parse status code (from int or HttpStatusCode enum value)
             var statusCodeText = context.statusCode.Text;
@@ -511,7 +511,7 @@ namespace Im.Proxy.VclCore.Compiler
                 new CodePrimitiveExpression(VclFrontendAction.DeliverContent));
         }
 
-        public override CodeObject VisitExpressionStatement(VclParser.ExpressionStatementContext context)
+        public override CodeObject VisitExpressionStatement(VclLangParser.ExpressionStatementContext context)
         {
             base.VisitExpressionStatement(context);
 
@@ -523,7 +523,7 @@ namespace Im.Proxy.VclCore.Compiler
             return null;
         }
 
-        public override CodeObject VisitAssignmentExpression(VclParser.AssignmentExpressionContext context)
+        public override CodeObject VisitAssignmentExpression(VclLangParser.AssignmentExpressionContext context)
         {
             base.VisitAssignmentExpression(context);
 
@@ -551,7 +551,7 @@ namespace Im.Proxy.VclCore.Compiler
             }
         }
 
-        public override CodeObject VisitConditionalExpression(VclParser.ConditionalExpressionContext context)
+        public override CodeObject VisitConditionalExpression(VclLangParser.ConditionalExpressionContext context)
         {
             base.VisitConditionalExpression(context);
 
@@ -576,7 +576,7 @@ namespace Im.Proxy.VclCore.Compiler
             //return result;
         }
 
-        public override CodeObject VisitConditionalOrExpression(VclParser.ConditionalOrExpressionContext context)
+        public override CodeObject VisitConditionalOrExpression(VclLangParser.ConditionalOrExpressionContext context)
         {
             base.VisitConditionalOrExpression(context);
 
@@ -587,7 +587,7 @@ namespace Im.Proxy.VclCore.Compiler
                 .SetExpressionType(typeof(bool));
         }
 
-        public override CodeObject VisitConditionalAndExpression(VclParser.ConditionalAndExpressionContext context)
+        public override CodeObject VisitConditionalAndExpression(VclLangParser.ConditionalAndExpressionContext context)
         {
             base.VisitConditionalAndExpression(context);
 
@@ -598,7 +598,7 @@ namespace Im.Proxy.VclCore.Compiler
                 .SetExpressionType(typeof(bool));
         }
 
-        public override CodeObject VisitInclusiveOrExpression(VclParser.InclusiveOrExpressionContext context)
+        public override CodeObject VisitInclusiveOrExpression(VclLangParser.InclusiveOrExpressionContext context)
         {
             base.VisitInclusiveOrExpression(context);
 
@@ -609,7 +609,7 @@ namespace Im.Proxy.VclCore.Compiler
                 .SetExpressionType(typeof(int));
         }
 
-        public override CodeObject VisitExclusiveOrExpression(VclParser.ExclusiveOrExpressionContext context)
+        public override CodeObject VisitExclusiveOrExpression(VclLangParser.ExclusiveOrExpressionContext context)
         {
             base.VisitExclusiveOrExpression(context);
 
@@ -623,7 +623,7 @@ namespace Im.Proxy.VclCore.Compiler
             //    .SetExpressionType(typeof(int));
         }
 
-        public override CodeObject VisitAndExpression(VclParser.AndExpressionContext context)
+        public override CodeObject VisitAndExpression(VclLangParser.AndExpressionContext context)
         {
             base.VisitAndExpression(context);
 
@@ -634,7 +634,7 @@ namespace Im.Proxy.VclCore.Compiler
                 .SetExpressionType(typeof(int));
         }
 
-        public override CodeObject VisitEqualStandardExpression(VclParser.EqualStandardExpressionContext context)
+        public override CodeObject VisitEqualStandardExpression(VclLangParser.EqualStandardExpressionContext context)
         {
             base.VisitEqualStandardExpression(context);
 
@@ -659,7 +659,7 @@ namespace Im.Proxy.VclCore.Compiler
             }
         }
 
-        public override CodeObject VisitMatchRegexExpression(VclParser.MatchRegexExpressionContext context)
+        public override CodeObject VisitMatchRegexExpression(VclLangParser.MatchRegexExpressionContext context)
         {
             base.VisitMatchRegexExpression(context);
 
@@ -697,7 +697,7 @@ namespace Im.Proxy.VclCore.Compiler
             return result;
         }
 
-        public override CodeObject VisitRegularExpression(VclParser.RegularExpressionContext context)
+        public override CodeObject VisitRegularExpression(VclLangParser.RegularExpressionContext context)
         {
             base.VisitRegularExpression(context);
 
@@ -716,7 +716,7 @@ namespace Im.Proxy.VclCore.Compiler
                 .SetExpressionType(typeof(Regex));
         }
 
-        public override CodeObject VisitMatchAclExpression(VclParser.MatchAclExpressionContext context)
+        public override CodeObject VisitMatchAclExpression(VclLangParser.MatchAclExpressionContext context)
         {
             base.VisitMatchAclExpression(context);
 
@@ -759,7 +759,7 @@ namespace Im.Proxy.VclCore.Compiler
             return result;
         }
 
-        public override CodeObject VisitRelationalExpression(VclParser.RelationalExpressionContext context)
+        public override CodeObject VisitRelationalExpression(VclLangParser.RelationalExpressionContext context)
         {
             base.VisitRelationalExpression(context);
 
@@ -798,7 +798,7 @@ namespace Im.Proxy.VclCore.Compiler
             }
         }
 
-        public override CodeObject VisitAdditiveExpression(VclParser.AdditiveExpressionContext context)
+        public override CodeObject VisitAdditiveExpression(VclLangParser.AdditiveExpressionContext context)
         {
             base.VisitAdditiveExpression(context);
 
@@ -823,7 +823,7 @@ namespace Im.Proxy.VclCore.Compiler
             }
         }
 
-        public override CodeObject VisitMultiplicativeExpression(VclParser.MultiplicativeExpressionContext context)
+        public override CodeObject VisitMultiplicativeExpression(VclLangParser.MultiplicativeExpressionContext context)
         {
             base.VisitMultiplicativeExpression(context);
 
@@ -857,7 +857,7 @@ namespace Im.Proxy.VclCore.Compiler
             }
         }
 
-        public override CodeObject VisitUnaryNegateExpression(VclParser.UnaryNegateExpressionContext context)
+        public override CodeObject VisitUnaryNegateExpression(VclLangParser.UnaryNegateExpressionContext context)
         {
             base.VisitUnaryNegateExpression(context);
 
@@ -867,7 +867,7 @@ namespace Im.Proxy.VclCore.Compiler
                 new CodePrimitiveExpression(false)).SetExpressionType(typeof(bool));
         }
 
-        public override CodeObject VisitAccessMemberHttp(VclParser.AccessMemberHttpContext context)
+        public override CodeObject VisitAccessMemberHttp(VclLangParser.AccessMemberHttpContext context)
         {
             if (!_contextObjectMapper.TryGetExpression(
                 new CodeArgumentReferenceExpression("context"),
@@ -884,7 +884,7 @@ namespace Im.Proxy.VclCore.Compiler
                 .SetExpressionType(typeof(string));
         }
 
-        public override CodeObject VisitAccessMemberNormal(VclParser.AccessMemberNormalContext context)
+        public override CodeObject VisitAccessMemberNormal(VclLangParser.AccessMemberNormalContext context)
         {
             if (!_contextObjectMapper.TryGetExpression(
                 new CodeArgumentReferenceExpression("context"),

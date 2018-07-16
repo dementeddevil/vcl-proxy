@@ -21,7 +21,7 @@ namespace Im.Proxy.VclCore.Compiler
 
         private CodeFieldReferenceExpression _currentBackendReference;
 
-        public override CodeObject VisitBackendDeclaration(VclParser.BackendDeclarationContext context)
+        public override CodeObject VisitBackendDeclaration(VclLangParser.BackendDeclarationContext context)
         {
             // Cache the current backend name
             var name = context.Identifier().GetText();
@@ -63,7 +63,7 @@ namespace Im.Proxy.VclCore.Compiler
             return null;
         }
 
-        public override CodeObject VisitBackendStringVariableExpression(VclParser.BackendStringVariableExpressionContext context)
+        public override CodeObject VisitBackendStringVariableExpression(VclLangParser.BackendStringVariableExpressionContext context)
         {
             base.VisitBackendStringVariableExpression(context);
 
@@ -78,7 +78,7 @@ namespace Im.Proxy.VclCore.Compiler
             return null;
         }
 
-        public override CodeObject VisitBackendIntegerVariableExpression(VclParser.BackendIntegerVariableExpressionContext context)
+        public override CodeObject VisitBackendIntegerVariableExpression(VclLangParser.BackendIntegerVariableExpressionContext context)
         {
             base.VisitBackendIntegerVariableExpression(context);
 
@@ -93,7 +93,7 @@ namespace Im.Proxy.VclCore.Compiler
             return null;
         }
 
-        public override CodeObject VisitBackendTimeVariableExpression(VclParser.BackendTimeVariableExpressionContext context)
+        public override CodeObject VisitBackendTimeVariableExpression(VclLangParser.BackendTimeVariableExpressionContext context)
         {
             base.VisitBackendTimeVariableExpression(context);
 
@@ -108,7 +108,7 @@ namespace Im.Proxy.VclCore.Compiler
             return null;
         }
 
-        public override CodeObject VisitBackendProbeVariableExpression(VclParser.BackendProbeVariableExpressionContext context)
+        public override CodeObject VisitBackendProbeVariableExpression(VclLangParser.BackendProbeVariableExpressionContext context)
         {
             base.VisitBackendProbeVariableExpression(context);
 
@@ -123,13 +123,13 @@ namespace Im.Proxy.VclCore.Compiler
             return null;
         }
 
-        public override CodeObject VisitProbeDeclaration(VclParser.ProbeDeclarationContext context)
+        public override CodeObject VisitProbeDeclaration(VclLangParser.ProbeDeclarationContext context)
         {
             // Named probe declarations are already handled elsewhere
             return null;
         }
 
-        public override CodeObject VisitProbeExpression(VclParser.ProbeExpressionContext context)
+        public override CodeObject VisitProbeExpression(VclLangParser.ProbeExpressionContext context)
         {
             if (context.probeReferenceExpression() != null)
             {
@@ -144,7 +144,7 @@ namespace Im.Proxy.VclCore.Compiler
             return null;
         }
 
-        public override CodeObject VisitProbeReferenceExpression(VclParser.ProbeReferenceExpressionContext context)
+        public override CodeObject VisitProbeReferenceExpression(VclLangParser.ProbeReferenceExpressionContext context)
         {
             var probeName = context.probeName.Text;
             if (!CompilerContext.ProbeReferences.ContainsKey(probeName))

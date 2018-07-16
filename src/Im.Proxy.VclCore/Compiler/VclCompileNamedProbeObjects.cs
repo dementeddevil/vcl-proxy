@@ -21,7 +21,7 @@ namespace Im.Proxy.VclCore.Compiler
 
         protected CodeExpression CurrentProbeExpression { get; set; }
 
-        public override CodeObject VisitProbeDeclaration(VclParser.ProbeDeclarationContext context)
+        public override CodeObject VisitProbeDeclaration(VclLangParser.ProbeDeclarationContext context)
         {
             var name = context.Identifier().GetText();
             if (CompilerContext.ProbeReferences.ContainsKey(name))
@@ -54,7 +54,7 @@ namespace Im.Proxy.VclCore.Compiler
             return null;
         }
 
-        public override CodeObject VisitProbeStringVariableExpression(VclParser.ProbeStringVariableExpressionContext context)
+        public override CodeObject VisitProbeStringVariableExpression(VclLangParser.ProbeStringVariableExpressionContext context)
         {
             base.VisitProbeStringVariableExpression(context);
 
@@ -69,7 +69,7 @@ namespace Im.Proxy.VclCore.Compiler
             return null;
         }
 
-        public override CodeObject VisitProbeIntegerVariableExpression(VclParser.ProbeIntegerVariableExpressionContext context)
+        public override CodeObject VisitProbeIntegerVariableExpression(VclLangParser.ProbeIntegerVariableExpressionContext context)
         {
             base.VisitProbeIntegerVariableExpression(context);
 
@@ -84,7 +84,7 @@ namespace Im.Proxy.VclCore.Compiler
             return null;
         }
 
-        public override CodeObject VisitProbeTimeVariableExpression(VclParser.ProbeTimeVariableExpressionContext context)
+        public override CodeObject VisitProbeTimeVariableExpression(VclLangParser.ProbeTimeVariableExpressionContext context)
         {
             base.VisitProbeTimeVariableExpression(context);
 

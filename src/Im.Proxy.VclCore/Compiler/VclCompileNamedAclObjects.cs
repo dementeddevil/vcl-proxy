@@ -13,7 +13,7 @@ namespace Im.Proxy.VclCore.Compiler
 
         private CodeExpression _currentAclBuilder;
 
-        public override CodeObject VisitAclDeclaration(VclParser.AclDeclarationContext context)
+        public override CodeObject VisitAclDeclaration(VclLangParser.AclDeclarationContext context)
         {
             _currentAclBuilder = null;
 
@@ -59,7 +59,7 @@ namespace Im.Proxy.VclCore.Compiler
             return null;
         }
 
-        public override CodeObject VisitAclElement(VclParser.AclElementContext context)
+        public override CodeObject VisitAclElement(VclLangParser.AclElementContext context)
         {
             var expression = base.VisitAclElement(context);
 
@@ -92,7 +92,7 @@ namespace Im.Proxy.VclCore.Compiler
             return null;
         }
 
-        public override CodeObject VisitAclEntryNonIgnorableHost(VclParser.AclEntryNonIgnorableHostContext context)
+        public override CodeObject VisitAclEntryNonIgnorableHost(VclLangParser.AclEntryNonIgnorableHostContext context)
         {
             base.VisitAclEntryNonIgnorableHost(context);
 
@@ -106,7 +106,7 @@ namespace Im.Proxy.VclCore.Compiler
                 new CodePrimitiveExpression(false));
         }
 
-        public override CodeObject VisitAclEntryIgnorableHost(VclParser.AclEntryIgnorableHostContext context)
+        public override CodeObject VisitAclEntryIgnorableHost(VclLangParser.AclEntryIgnorableHostContext context)
         {
             base.VisitAclEntryIgnorableHost(context);
 
@@ -120,7 +120,7 @@ namespace Im.Proxy.VclCore.Compiler
                 new CodePrimitiveExpression(true));
         }
 
-        public override CodeObject VisitAclEntryIpAddress(VclParser.AclEntryIpAddressContext context)
+        public override CodeObject VisitAclEntryIpAddress(VclLangParser.AclEntryIpAddressContext context)
         {
             base.VisitAclEntryIpAddress(context);
 
@@ -132,7 +132,7 @@ namespace Im.Proxy.VclCore.Compiler
                 new CodePrimitiveExpression(context.address.Text));
         }
 
-        public override CodeObject VisitAclEntrySubnetMask(VclParser.AclEntrySubnetMaskContext context)
+        public override CodeObject VisitAclEntrySubnetMask(VclLangParser.AclEntrySubnetMaskContext context)
         {
             base.VisitAclEntrySubnetMask(context);
 

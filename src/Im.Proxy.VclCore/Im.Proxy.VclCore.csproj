@@ -121,6 +121,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Compiler\CodeObjectExtensions.cs" />
+    <Compile Include="Compiler\VclLang.g4.lexer.cs" />
+    <Compile Include="Compiler\VclLang.g4.parser.cs" />
     <Compile Include="Compiler\VclLexer.g4.lexer.cs">
       <DependentUpon>VclLexer.g4</DependentUpon>
     </Compile>
@@ -150,7 +152,7 @@
     <Compile Include="Model\VclResponse.cs" />
     <Compile Include="Model\VclServer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Compiler\Vcl.g4.parser.cs">
+    <Compile Include="Compiler\VclParser.g4.parser.cs">
       <DependentUpon>VclParser.g4</DependentUpon>
     </Compile>
     <Compile Include="Runtime\WebListenerProxy.cs" />
@@ -159,16 +161,20 @@
     <Compile Include="Model\VclProbe.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Antlr4 Include="Compiler\VclParser.g4">
+    <None Include="Compiler\VclParser.g4">
       <Generator>MSBuild:Compile</Generator>
       <CustomToolNamespace>Im.Proxy.VclCore.Compiler</CustomToolNamespace>
       <Listener>False</Listener>
       <Visitor>True</Visitor>
-    </Antlr4>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
-    <Antlr4 Include="Compiler\VclLexer.g4">
+    <None Include="Compiler\VclLexer.g4">
+      <Generator>MSBuild:Compile</Generator>
+      <CustomToolNamespace>Im.Proxy.VclCore.Compiler</CustomToolNamespace>
+    </None>
+    <Antlr4 Include="Compiler\VclLang.g4">
       <Generator>MSBuild:Compile</Generator>
       <CustomToolNamespace>Im.Proxy.VclCore.Compiler</CustomToolNamespace>
     </Antlr4>

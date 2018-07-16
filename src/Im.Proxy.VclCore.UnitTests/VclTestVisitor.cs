@@ -4,11 +4,11 @@ using Im.Proxy.VclCore.Compiler;
 
 namespace Im.Proxy.VclCore.UnitTests
 {
-    public class VclTestVisitor : VclParserBaseVisitor<bool>
+    public class VclTestVisitor : VclLangBaseVisitor<bool>
     {
         public IList<string> Operations { get; } = new List<string>();
 
-        public override bool VisitCompoundStatement(VclParser.CompoundStatementContext context)
+        public override bool VisitCompoundStatement(VclLangParser.CompoundStatementContext context)
         {
             using (BeginScopedOperation("compound statement"))
             {
@@ -16,25 +16,25 @@ namespace Im.Proxy.VclCore.UnitTests
             }
         }
 
-        public override bool VisitProcedureDeclaration(VclParser.ProcedureDeclarationContext context)
+        public override bool VisitProcedureDeclaration(VclLangParser.ProcedureDeclarationContext context)
         {
             Operations.Add($"Function {context.children[1].GetText()}");
             return base.VisitProcedureDeclaration(context);
         }
 
-        public override bool VisitIfStatement(VclParser.IfStatementContext context)
+        public override bool VisitIfStatement(VclLangParser.IfStatementContext context)
         {
             Operations.Add($"If {context.children[2].GetText()}");
             return base.VisitIfStatement(context);
         }
 
-        public override bool VisitIncludeDeclaration(VclParser.IncludeDeclarationContext context)
+        public override bool VisitIncludeDeclaration(VclLangParser.IncludeDeclarationContext context)
         {
             Operations.Add($"Include {context.children[1].GetText().Trim('"')}");
             return base.VisitIncludeDeclaration(context);
         }
 
-        public override bool VisitReturnStatement(VclParser.ReturnStatementContext context)
+        public override bool VisitReturnStatement(VclLangParser.ReturnStatementContext context)
         {
             Operations.Add($"Return {context.children[2].GetText()}");
             return base.VisitReturnStatement(context);
