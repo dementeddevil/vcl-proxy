@@ -24,6 +24,10 @@ Sub
 	:	'sub'
 	;
 
+SyntheticString
+	:	'{"' .*? '"}'
+	;
+
 StringConstant
 	:	'"' CharacterSequence? '"'
 	;
@@ -58,20 +62,20 @@ LineComment
         -> skip
     ;
 
-LBrace
-	:	'{'
-	;
-
 Semi
 	:	';'
 	;
 
-RBrace
-	:	'}'
+LBrace
+	:	'{'
+		-> pushMode(BLOCK)
 	;
 
-IfToken
-	:	'if'
+mode BLOCK;
+
+RBrace
+	:	'}'
+		-> popMode
 	;
 
 Elseif
@@ -88,6 +92,10 @@ Elif
 
 Else
 	:	'else'
+	;
+
+IfToken
+	:	'if'
 	;
 
 Synthetic
@@ -182,20 +190,20 @@ Threshold
 	:	'threshold'
 	;
 
-Request
-	:	'req'
-	;
-
-Response
-	:	'resp'
-	;
-
 BackendRequest
 	:	'bereq'
 	;
 
 BackendResponse
 	:	'beresp'
+	;
+
+Request
+	:	'req'
+	;
+
+Response
+	:	'resp'
 	;
 
 Client
@@ -218,12 +226,12 @@ Declare
 	:	'declare'
 	;
 
-Set
-	:	'set'
-	;
-
 Unset
 	:	'unset'
+	;
+
+Set
+	:	'set'
 	;
 
 Remove
@@ -332,16 +340,20 @@ BooleanConstant
 	;
 
 TimeConstant
-	:	Digit+ ('ms' | 's' | 'm' | 'h' | 'd' | 'w' | 'y')
+	:	DigitChar+ ('ms' | 's' | 'm' | 'h' | 'd' | 'w' | 'y')
 	;
 
 IntegerConstant
-	:	Digit+
+	:	DigitChar+
 	;
 
 IdentifierWithHyphen
 	:   IdentifierNondigit IdentifierAnyWithHyphen*
     ;
+
+HexEncoding
+	:	(PercentChar [a-fA-F0-9] [a-fA-F0-9]) +
+	;
 
 DoubleEqual
 	:	'=='
@@ -416,11 +428,11 @@ Star
 	;
 
 Slash
-	:	'/'
+	:	SlashChar
 	;
 
 Percent
-	:	'%'
+	:	PercentChar
 	;
 
 Hat
@@ -432,7 +444,7 @@ Comma
 	;
 
 Dot
-	:	'.'
+	:	DotChar
 	;
 
 LParens
@@ -444,23 +456,15 @@ RParens
 	;
 
 Minus
-	:	Hyphen
-	;
-
-HexEncoding
-	:	('%' [a-fA-F0-9] [a-fA-F0-9]) +
+	:	HyphenChar
 	;
 
 SubnetMask
-	:	IpAddressSequence '/' Digit+
+	:	IpAddressSequence SlashChar DigitChar+
 	;
 
 IpAddress
 	:	IpAddressSequence
-	;
-
-SyntheticString
-	:	'{"' .*? '"}'
 	;
 
 fragment
@@ -470,25 +474,25 @@ SystemSubPrefix
 
 fragment
 IdentifierNondigit
-    :   Nondigit
+    :   NondigitChar
     ;
 
 fragment
 IdentifierAny
-	:	Nondigit
-    |   Digit
+	:	NondigitChar
+    |   DigitChar
 	;
 
 fragment
 IdentifierAnyWithHyphen
-	:	Nondigit
-	|	Digit
-	|	Hyphen
+	:	NondigitChar
+	|	DigitChar
+	|	HyphenChar
 	;
 
 fragment
 IpAddressSequence
-	:	'"' Digit+ '.' Digit+ '.' Digit+ '.' Digit+ '"'
+	:	'"' DigitChar+ DotChar DigitChar+ DotChar DigitChar+ DotChar DigitChar+ '"'
 	;
 
 fragment
@@ -503,18 +507,33 @@ Char
 	;
 
 fragment
-Nondigit
+NondigitChar
     :   [a-zA-Z_]
     ;
 
 fragment
-Digit
+DigitChar
     :   [0-9]
     ;
 
 fragment
-Hyphen
+HyphenChar
 	:	'-'
+	;
+
+fragment
+SlashChar
+	:	'/'
+	;
+
+fragment
+DotChar
+	:	'.'
+	;
+
+fragment
+PercentChar
+	:	'%'
 	;
 
 fragment

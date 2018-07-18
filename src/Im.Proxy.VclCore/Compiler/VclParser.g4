@@ -355,7 +355,7 @@ argumentList
 
 memberAccessExpression
 	:	obj=contextTransferObjects Dot Http Dot header=IdentifierWithHyphen			# AccessMemberHttp
-	|	obj=contextAllObjects Dot name=(Identifier | Backend)									# AccessMemberNormal
+	|	obj=contextAllObjects Dot name=(Identifier | Backend)						# AccessMemberNormal
 	;
 
 contextTransferObjects
