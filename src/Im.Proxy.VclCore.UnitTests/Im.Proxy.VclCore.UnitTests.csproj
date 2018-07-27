@@ -169,6 +169,7 @@
     <EmbeddedResource Include="hitcheduat.vcl" />
     <EmbeddedResource Include="sub.vcl" />
     <None Include="packages.config" />
+    <EmbeddedResource Include="backend.vcl" />
   </ItemGroup>
   <ItemGroup>
     <Analyzer Include="..\packages\xunit.analyzers.0.9.0\analyzers\dotnet\cs\xunit.analyzers.dll" />

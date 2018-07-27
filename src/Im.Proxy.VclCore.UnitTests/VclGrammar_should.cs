@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.IO;
 using FluentAssertions;
 using Im.Proxy.VclCore.Compiler;
@@ -186,15 +187,22 @@ namespace Im.Proxy.VclCore.UnitTests
             //    });
         }
 
-        [Fact]
-        public void EvaluateHitchedUat()
+        [Theory]
+        [InlineData("backend.vcl")]
+        [InlineData("sub.vcl")]
+        public void CompileVcl(string vclFilename)
         {
+            // Determine name modifier for output assembly
+            var name = CultureInfo
+                .CurrentCulture.TextInfo
+                .ToTitleCase(Path.GetFileNameWithoutExtension(vclFilename));
+
             // Arrange
             var testPath = Path.GetDirectoryName(typeof(VclGrammar_should).Assembly.Location);
-            var outputAssembly = Path.Combine(testPath, "HitchedVclHandler.dll");
+            var outputAssembly = Path.Combine(testPath, $"Hitched{name}VclHandler.dll");
 
             // Act
-            new VclCompiler(Cache, FileProvider).CompileAndBuildModule("sub.vcl", outputAssembly);
+            new VclCompiler(Cache, FileProvider).CompileAndBuildModule(vclFilename, outputAssembly);
 
             // Assert
         }
