@@ -2,6 +2,7 @@
 using System.CodeDom;
 using System.CodeDom.Compiler;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Antlr4.Runtime;
@@ -114,6 +115,7 @@ namespace Im.Proxy.VclCore.Compiler
                     {
                         // Read file content from reader
                         var vclContent = reader.ReadToEnd();
+                        Debug.WriteLine(vclContent);
 
                         // Process include directives
                         var includeDirectiveCompiler = new VclCompileIncludes();

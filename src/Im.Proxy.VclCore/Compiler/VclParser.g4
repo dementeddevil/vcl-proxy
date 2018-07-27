@@ -43,22 +43,22 @@ backendElement
 	;
 
 backendVariableExpression
-	:	backendStringVariableExpression Semi
-	|	backendIntegerVariableExpression Semi
-	|	backendTimeVariableExpression Semi
+	:	backendStringVariableExpression
+	|	backendIntegerVariableExpression
+	|	backendTimeVariableExpression
 	|	backendProbeVariableExpression
 	;
 
 backendStringVariableExpression
-	:	name=backendStringVariableName Equal value=stringLiteral
+	:	name=backendStringVariableName Equal value=stringLiteral Semi
 	;
 
 backendIntegerVariableExpression
-	:	name=backendIntegerVariableName Equal value=integerLiteral
+	:	name=backendIntegerVariableName Equal value=integerLiteral Semi
 	;
 
 backendTimeVariableExpression
-	:	name=backendTimeVariableName Equal value=timeLiteral
+	:	name=backendTimeVariableName Equal value=timeLiteral Semi
 	;
 
 backendProbeVariableExpression

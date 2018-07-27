@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using FluentAssertions;
@@ -192,6 +193,7 @@ namespace Im.Proxy.VclCore.UnitTests
         [InlineData("sub.vcl")]
         public void CompileVcl(string vclFilename)
         {
+            Debug.WriteLine($"");
             // Determine name modifier for output assembly
             var name = CultureInfo
                 .CurrentCulture.TextInfo

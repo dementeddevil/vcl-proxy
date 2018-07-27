@@ -4,6 +4,38 @@ lexer grammar VclLexer;
  * Lexer Rules
  */
 
+HostHeader
+	:	'host_header'
+	;
+
+ProxyHeader
+	:	'proxy_header'
+	;
+
+MaxConnections
+	:	'max_connections'
+	;
+
+ConnectionTimeout
+	:	'connection_timeout'
+	;
+
+FirstByteTimeout
+	:	'first_byte_timeout'
+	;
+
+BetweenBytesTimeout
+	:	'between_bytes_timeout'
+	;
+
+ExpectedResponse
+	:	'expected_response'
+	;
+
+HashData
+	:	'hash_data'
+	;
+
 Backend
 	:	'backend'
 	;
@@ -22,60 +54,6 @@ Acl
 
 Sub
 	:	'sub'
-	;
-
-SyntheticString
-	:	'{"' .*? '"}'
-	;
-
-StringConstant
-	:	'"' CharacterSequence? '"'
-	;
-
-VclIdentifier
-	:	SystemSubPrefix IdentifierNondigit IdentifierAny*
-	;
-
-Identifier
-    :   IdentifierNondigit IdentifierAny*
-    ;
-
-Whitespace
-    :   [ \t]+
-        -> skip
-    ;
-
-Newline
-    :   (   '\r' '\n'?
-        |   '\n'
-        )
-        -> skip
-    ;
-
-BlockComment
-    :   '/*' .*? '*/'
-        -> skip
-    ;
-
-LineComment
-    :   ('# ' | '//') ~[\r\n]*
-        -> skip
-    ;
-
-Semi
-	:	';'
-	;
-
-LBrace
-	:	'{'
-		-> pushMode(BLOCK)
-	;
-
-mode BLOCK;
-
-RBrace
-	:	'}'
-		-> popMode
 	;
 
 Elseif
@@ -110,10 +88,6 @@ Return
 	:	'return'
 	;
 
-HashData
-	:	'hash_data'
-	;
-
 Synth
 	:	'synth'
 	;
@@ -138,30 +112,6 @@ Now
 	:	'now'
 	;
 
-HostHeader
-	:	'host_header'
-	;
-
-ProxyHeader
-	:	'proxy_header'
-	;
-
-MaxConnections
-	:	'max_connections'
-	;
-
-ConnectionTimeout
-	:	'connection_timeout'
-	;
-
-FirstByteTimeout
-	:	'first_byte_timeout'
-	;
-
-BetweenBytesTimeout
-	:	'between_bytes_timeout'
-	;
-
 Url
 	:	'url'
 	;
@@ -172,10 +122,6 @@ Timeout
 
 Interval
 	:	'interval'
-	;
-
-ExpectedResponse
-	:	'expected_response'
 	;
 
 Initial
@@ -266,12 +212,16 @@ Purge
 	:	'purge'
 	;
 
-Pass
-	:	'pass'
-	;
-
 Pipe
 	:	'pipe'
+	;
+
+HitForPass
+	:	'hit-for-pass'
+	;
+
+Pass
+	:	'pass'
 	;
 
 Hit
@@ -280,10 +230,6 @@ Hit
 
 Miss
 	:	'miss'
-	;
-
-HitForPass
-	:	'hit-for-pass'
 	;
 
 Fetch
@@ -332,6 +278,34 @@ TypeRtime
 
 TypeString
 	:	'STRING'
+	;
+
+SyntheticString
+	:	'{"' .*? '"}'
+	;
+
+StringConstant
+	:	'"' CharacterSequence? '"'
+	;
+
+VclIdentifier
+	:	SystemSubPrefix IdentifierNondigit IdentifierAny*
+	;
+
+Identifier
+    :   IdentifierNondigit IdentifierAny*
+    ;
+
+Semi
+	:	';'
+	;
+
+LBrace
+	:	'{'
+	;
+
+RBrace
+	:	'}'
 	;
 
 BooleanConstant
@@ -466,6 +440,28 @@ SubnetMask
 IpAddress
 	:	IpAddressSequence
 	;
+
+Whitespace
+    :   [ \t]+
+        -> skip
+    ;
+
+Newline
+    :   (   '\r' '\n'?
+        |   '\n'
+        )
+        -> skip
+    ;
+
+BlockComment
+    :   '/*' .*? '*/'
+        -> skip
+    ;
+
+LineComment
+    :   ('# ' | '//') ~[\r\n]*
+        -> skip
+    ;
 
 fragment
 SystemSubPrefix
